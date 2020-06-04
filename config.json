@@ -1,0 +1,15 @@
+{
+	"Ignore": [
+		"water_bucket",
+		"iron_block"
+	],
+	"StopAt": [
+		"white_wool",
+		"honey_block",
+		"quartz_slab",
+		"stick",
+		"quartz",
+		"stone"
+	],
+	"lang": "en_us"
+}
