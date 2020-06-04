@@ -1,14 +1,8 @@
 {
 	"Ignore": [
-		"water_bucket",
-		"iron_block"
 	],
 	"StopAt": [
-		"white_wool",
-		"honey_block",
-		"quartz_slab",
-		"stick",
-		"quartz",
+		"honey_bottle",
 		"stone"
 	],
 	"lang": "en_us"
