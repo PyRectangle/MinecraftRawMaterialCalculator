@@ -8,9 +8,9 @@ A command line tool, that lets you calculate the raw materials needed for a buil
 ## Usage
 `python main.py <config> <materialList>`  
 The config file is a json file that defines the following variables:  
-Ignore: A list of items that will be ignored from the material list. Useful if you're building with resource blocks.  
-StopAt: A list of items the program should stop at. For example if you have a lot of sticks you don't want the program to count them as planks because you already have them.  
-lang: The language code your game is in. That is required, because litematica converts the block ids to the actual names and this program uses it to ask questions about how you want to craft things.  
+`Ignore`: A list of items that will be ignored from the material list. Useful if you're building with resource blocks.  
+`StopAt`: A list of items the program should stop at. For example if you have a lot of sticks you don't want the program to count them as planks because you already have them.  
+`lang`: The language code your game is in. That is required, because litematica converts the block ids to the actual names and this program uses it to ask questions about how you want to craft things.  
 A config could look like [this](config.json).
 ## Example
 So for example a material list generated using litematica usually looks like this:
