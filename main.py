@@ -1,13 +1,27 @@
-import json
 import sys
-import re
+needGui = len(sys.argv) == 1 or "-g" in sys.argv or "--gui" in sys.argv
+if needGui:
+    from PIL import Image
+    import PySimpleGUI as sg
+    if __name__ == "__main__":
+        import config as configDialog
+import lang
+import json
+import io
 import os
 
 
-config = json.load(open(sys.argv[1]))
-langJson = json.load(open("lang/" + config["lang"] + ".json"))
-langJsonInverted = {y: x for x, y in langJson.items()}
+config = json.load(open("config.json"))
+otherConfig = json.load(open(config["config"]))
+for key in otherConfig:
+    config[key] = otherConfig[key]
+langJson, langJsonInverted = lang.getLang("lang/" + config["lang"] + ".json")
+if needGui:
+    sg.theme(config["theme"])
+    idPos = json.load(open("itemTextures.json"))
+    atlas = Image.open("spritesheet.png")
 recipeDone = []
+recipeDoneWith = {}
 doneAt = {}
 awnsered = {}
 ways = {}
@@ -89,14 +103,38 @@ def convertDictToList(dictList):
     return text
 
 
+def getItemTexture(itemId, pil = False):
+    try:
+        item = Image.open("textures/" + itemId.replace("minecraft:", "") + ".png")
+        item = item.resize((32, 32))
+    except FileNotFoundError:
+        pos = idPos[itemId]
+        y = int(pos / 32) * 32
+        x = (pos % 32 - 1) * 32
+        if x < 0:
+            x += 32 * 32
+            y -= 32
+        item = atlas.crop((x, y, x + 32, y + 32))
+    if pil:
+        return item
+    itemData = io.BytesIO()
+    item.save(itemData, "PNG")
+    return itemData.getvalue()
+
+
 def blockIdToName(blockId):
+    if blockId == "empty":
+        return None
     try:
         blockName = langJson["block." + blockId.replace(":", ".")]
     except KeyError:
         try:
             blockName = langJson["item." + blockId.replace(":", ".")]
         except KeyError:
-            blockName = langJson["container." + blockId.replace(":", ".")]
+            try:
+                blockName = langJson["container." + blockId.replace(":", ".")]
+            except KeyError:
+                return blockId
     return blockName
 
 
@@ -105,21 +143,33 @@ def howToCraftDialog(possebilities, blockId):
         return awnsered[str(possebilities)]
     except KeyError:
         pass
-    print("What do you use to make", blockIdToName(blockId) + "?")
-    count = 0
-    for possebility in possebilities:
-        print(count, possebility)
-        count += 1
-    while True:
-        try:
-            solution = possebilities[int(input("The number:"))]
-            awnsered[str(possebilities)] = solution
-            return solution
-        except ValueError:
-            print("Needs to be a number!")
+    text = "What do you use to make " + blockIdToName(blockId) + "?"
+    if cmd:
+        number = cmdDialog([blockIdToName(block) for block in possebilities], text)
+        awnsered[str(possebilities)] = possebilities[number]
+        return possebilities[number]
+    layout = [[sg.Text(text)]]
+    first = True
+    for i in possebilities:
+        layout.append([sg.Image(data = getItemTexture(i)), sg.Radio(blockIdToName(tagToName(i)), "craft", first, key = i)])
+        first = False
+    layout.append([sg.Button("Ok", bind_return_key = True), sg.Button("Cancel")])
+    if "test" in sys.argv:
+        return possebilities[0]
+    else:
+        window = sg.Window(text, layout)
+        event, values = window.read()
+        window.close()
+        if event == "Cancel" or event == sg.WIN_CLOSED:
+            exit()
+        if event == "Ok":
+            for i in values:
+                if values[i]:
+                    awnsered[str(possebilities)] = i
+                    return i
 
 
-def recipeToDict(blockId, returnType = False):
+def recipeToDict(blockId):
     realId = blockId.split("_from_")[0]
     materials = {}
     path = "recipes/" + blockId + ".json"
@@ -127,8 +177,25 @@ def recipeToDict(blockId, returnType = False):
     try:
         count = recipeJson["result"]["count"]
     except (KeyError, TypeError):
-        count = 1
+        try:
+            count = recipeJson["count"]
+        except KeyError:
+            count = 1
+    try:
+        materials["result"] = recipeJson["result"]["item"]
+    except (KeyError, TypeError):
+        try:
+            materials["result"] = "tag:" + recipeJson["result"]["tag"]
+        except (KeyError, TypeError):
+            try:
+                materials["result"] = recipeJson["result"]
+            except KeyError:
+                print("This recipe is hardcoded in the game and can therefore not be shown here.")
+                exit(1)
+    materials["count"] = count
     if recipeJson["type"] == "minecraft:crafting_shaped":
+        materials["shape"] = recipeJson["pattern"]
+        materials["keys"] = {}
         recipeString = ""
         for line in recipeJson["pattern"]:
             recipeString += line
@@ -137,32 +204,48 @@ def recipeToDict(blockId, returnType = False):
                 possebilities = []
                 for i in recipeJson["key"][key]:
                     try:
-                        possebilities.append(blockIdToName(i["item"]))
+                        possebilities.append(i["item"])
                     except KeyError:
-                        possebilities.append("tag:" + blockIdToName(i["tag"]))
-                solution = langJsonInverted[howToCraftDialog(possebilities, "minecraft:" + realId)].replace("container.", "").replace("block.", "").replace("item.", "").replace("minecraft.", "minecraft:")
+                        possebilities.append("tag:" + i["tag"])
+                solution = howToCraftDialog(possebilities, "minecraft:" + realId)
                 materials[solution] = recipeString.count(key) / count
             else:
                 try:
-                    materials[recipeJson["key"][key]["item"]] = recipeString.count(key) / count 
+                    solution = recipeJson["key"][key]["item"]
                 except KeyError:
-                    materials["tag:" + recipeJson["key"][key]["tag"]] = recipeString.count(key) / count 
+                    solution = "tag:" + recipeJson["key"][key]["tag"]
+                materials[solution] = recipeString.count(key) / count 
+            materials["keys"][key] = solution
     if recipeJson["type"] == "minecraft:crafting_shapeless":
         for i in recipeJson["ingredients"]:
-            try:
-                itemCount = i["count"]
-            except KeyError:
-                itemCount = 1
-            try:
+            if type(i) == list:
+                possebilities = []
+                for p in i:
+                    try:
+                        itemCount = p["count"]
+                    except KeyError:
+                        itemCount = 1
+                    try:
+                        possebilities.append(p["item"])
+                    except KeyError:
+                        possebilities.append("tag:" + p["tag"])
+                solution = howToCraftDialog(possebilities, "minecraft:" + realId)
+                materials[solution] = itemCount / count
+            else:
                 try:
-                    materials[i["item"]] += itemCount / count
+                    itemCount = i["count"]
                 except KeyError:
-                    materials["tag:" + i["tag"]] += itemCount / count
-            except KeyError:
+                    itemCount = 1
                 try:
-                    materials[i["item"]] = itemCount / count
+                    try:
+                        materials[i["item"]] += itemCount / count
+                    except KeyError:
+                        materials["tag:" + i["tag"]] += itemCount / count
                 except KeyError:
-                    materials["tag:" + i["tag"]] = itemCount / count
+                    try:
+                        materials[i["item"]] = itemCount / count
+                    except KeyError:
+                        materials["tag:" + i["tag"]] = itemCount / count
     if recipeJson["type"] == "minecraft:smelting":
         try:
             materials[recipeJson["ingredient"]["item"]] = 1
@@ -174,10 +257,10 @@ def recipeToDict(blockId, returnType = False):
                     possebilities = []
                     for i in recipeJson["ingredient"]:
                         try:
-                            possebilities.append(blockIdToName(i["item"]))
+                            possebilities.append(i["item"])
                         except KeyError:
-                            possebilities.append("tag:" + blockIdToName(i["tag"]))
-                    solution = langJsonInverted[howToCraftDialog(possebilities, "minecraft:" + realId)].replace("container.", "").replace("block.", "").replace("item.", "").replace("minecraft.", "minecraft:")
+                            possebilities.append("tag:" + i["tag"])
+                    solution = howToCraftDialog(possebilities, "minecraft:" + realId)
                     materials[solution] = 1
     if recipeJson["type"] == "minecraft:stonecutting":
         materials[recipeJson["ingredient"]["item"]] = 1 / recipeJson["count"]
@@ -190,9 +273,86 @@ def recipeToDict(blockId, returnType = False):
             materials[solution] = 1
         else:
             materials[recipeJson["ingredient"]["item"]] = 1
-    if returnType:
-        materials["type"] = recipeJson["type"]
+    materials["type"] = recipeJson["type"]
     return materials
+
+
+def tagToName(tag):
+    tag = tag.replace("#", "").replace("tag:", "")
+    name = blockIdToName(tag.replace("#", ""))
+    if "minecraft:" in name:
+        name = blockIdToName(tag.replace("#", "")[0:-1])
+    if "minecraft:" in name:
+        name = tag.replace("minecraft:", "")
+    return name
+
+
+def tagDialog(tag, possebilities):
+    text = "What " + tagToName(tag) + " do you use?"
+    if cmd:
+        for i in range(len(possebilities)):
+            possebilities[i] = tagToName(possebilities[i])
+        return cmdDialog(possebilities, text)
+    layout = [[sg.Text(text)]]
+    first = True
+    count = 0
+    for i in possebilities:
+        tagId = i.replace("#", "").replace("tag:", "")
+        try:
+            texture = getItemTexture(tagId)
+        except KeyError:
+            try:
+                texture = getItemTexture(tagId[0:-1])
+            except KeyError:
+                texture = None
+        layout.append([sg.Image(data = texture), sg.Radio(tagToName(i), "tag", first, key = str(count))])
+        first = False
+        count += 1
+    layout.append([sg.Button("Ok", bind_return_key = True), sg.Button("Cancel")])
+    if "test" in sys.argv:
+        return 0
+    else:
+        window = sg.Window(text, layout)
+        event, values = window.read()
+        window.close()
+        if event == "Cancel" or event == sg.WIN_CLOSED:
+            exit()
+        if event == "Ok":
+            for i in values:
+                if values[i]:
+                    return int(i)
+
+
+def getTagBlockId(tag):
+    if "tag:" in tag:
+        try:
+            possebilities = json.load(open("tags/" + tag.replace("tag:minecraft:", "") + ".json"))["values"]
+            try:
+                returnTag = awnsered[str(possebilities)]
+                if "tag:" in returnTag or "#minecraft" in returnTag:
+                    return getTagBlockId(returnTag)
+                else:
+                    return returnTag
+            except KeyError:
+                pass
+            if len(possebilities) == 1:
+                if possebilities[0][0] == "#":
+                    returnTag = getTagBlockId(possebilities[0].replace("#", "tag:"))
+                    awnsered[str(possebilities)] = returnTag
+                    return returnTag
+                awnsered[str(possebilities)] = possebilities[0]
+                return possebilities[0]
+            number = tagDialog(tag, possebilities.copy())
+            if possebilities[number][0] == "#":
+                returnTag = getTagBlockId(possebilities[number].replace("#", "tag:"))
+                awnsered[str(possebilities)] = returnTag
+                return returnTag
+            awnsered[str(possebilities)] = possebilities[number]
+            return possebilities[number]
+        except FileNotFoundError:
+            return tag
+    else:
+        return tag
 
 
 def convertToRaw(item, multiplier = 1):
@@ -207,6 +367,13 @@ def convertToRaw(item, multiplier = 1):
         return {item: multiplier}
     if item in doneAt:
         ways[item][1] += doneAt[item][1] / doneAt[item][0] * multiplier
+        try:
+            returnRecipe = {}
+            for material in recipeDoneWith[item]:
+                returnRecipe[material] = recipeDoneWith[item][material] * multiplier
+            return returnRecipe
+        except KeyError:
+            return {item: multiplier}
         return {item: multiplier}
     if item in recipeDone:
         try:
@@ -214,7 +381,13 @@ def convertToRaw(item, multiplier = 1):
         except KeyError:
             ways[item] = [recipeDone[-1], lastMultiplier]
         doneAt[item] = [multiplier, lastMultiplier]
-        return {item: multiplier}
+        try:
+            returnRecipe = {}
+            for material in recipeDoneWith[item]:
+                returnRecipe[material] = recipeDoneWith[item][material] * multiplier
+            return returnRecipe
+        except KeyError:
+            return {item: multiplier}
     lastMultiplier = multiplier
     recipeDone.append(item)
     possebilities = []
@@ -228,38 +401,36 @@ def convertToRaw(item, multiplier = 1):
             recipe = awnsered[str(possebilities)]
         except KeyError:
             count = 0
-            for i in possebilities:       
-                recipe = recipeToDict(i, True)
-            print("How do you make", blockIdToName(item) + "?")
-            for i in possebilities:
-                recipe = recipeToDict(i, True)
-                craftingType = recipe["type"].replace("minecraft:", "")
-                del recipe["type"]
-                print(count, craftingTypes[craftingType] + ": ", end = "")
-                for material, materialCount in recipe.items():
-                    if materialCount > int(materialCount):
-                        materialCount = int(materialCount + 1)
-                    else:
-                        materialCount = int(materialCount)
-                    print(blockIdToName(material) + ": " + str(materialCount), end = " ")
-                print()
-                count += 1
-            while True:
-                try:
-                    recipe = possebilities[int(input("The Number:"))]
-                    awnsered[str(possebilities)] = recipe
-                    break
-                except ValueError:
-                    print("Needs to be a number!")
+            recipe = recipeChooseDialog(possebilities, "How do you make " + blockIdToName(item) + "?")
+            awnsered[str(possebilities)] = recipe
     else:
         recipe = possebilities[0]
     try:
         recipeDict = recipeToDict(recipe)
+        realRecipeDict = {}
         for material in recipeDict:
-            recipeDict[material] *= multiplier
-        return convertListToRaw(recipeDict, "" , False)
+            if "minecraft:" in material:
+                realRecipeDict[material] = multiplier * recipeDict[material]
+        recipeDoneWith[item] = convertListToRaw(realRecipeDict, "" , False)
+        returnRecipe = recipeDoneWith[item].copy()
+        for material in recipeDoneWith[item]:
+            recipeDoneWith[item][material] /= multiplier
+        return returnRecipe
     except FileNotFoundError:
         return {item: multiplier}
+
+
+def convertListToRaw(materialList, prefix = "minecraft:", clear = True):
+    rawList = {}
+    for material, count in materialList.items():
+        if clear:
+            recipeDone.clear()
+        if "minecraft:" in material:
+            raw = convertToRaw(material, count)
+        else:
+            raw = convertToRaw(prefix + material, count)
+        rawList = mergeDicts(rawList, raw)
+    return rawList
 
 
 def mergeDicts(d0, d1):
@@ -271,47 +442,281 @@ def mergeDicts(d0, d1):
     return d0
 
 
-def getTagBlockId(tag):
-    possebilities = []
-    for i in os.listdir("recipes"):
+if "test" in sys.argv:
+    def input(text):
+        print(text + "0")
+        return "0"
+
+
+def getRecipeLayout(recipe):
+    recipe = recipeToDict(recipe)
+    recipeLayout = []
+    if recipe["type"] == "minecraft:crafting_shaped":
+        for i in recipe["shape"]:
+            recipeLayout.append(list(i))
+        for row in range(len(recipeLayout)):
+            for i in range(len(recipeLayout[row])):
+                if recipeLayout[row][i] == " ":
+                    blockId = "empty"
+                else:
+                    blockId = getTagBlockId(recipe["keys"][recipeLayout[row][i]])
+                recipeLayout[row][i] = blockId
+    else:
+        row = []
+        appended = False
+        for i in recipe:
+            if "minecraft:" in i:
+                for number in range(int(recipe[i] * recipe["count"])):
+                    row.append(i)
+                    if len(row) == 3:
+                        recipeLayout.append(row.copy())
+                        row = []
+                        appended = True
+        if not appended:
+            while len(row) < 3 and recipe["type"] == "minecraft:crafting_shaped":
+                row.append("empty")
+            recipeLayout.append(row)
+    for row in range(len(recipeLayout)):
+        for i in range(len(recipeLayout[row])):
+            blockId = getTagBlockId(recipeLayout[row][i])
+            recipeLayout[row][i] = sg.Image(data = getItemTexture(blockId), tooltip = blockIdToName(blockId)) 
+    middle = int(len(recipeLayout) / 2) 
+    recipeLayout[middle].append(sg.Text("➔ " + str(recipe["count"]) + "x"))
+    recipeLayout[middle].append(sg.Image(data = getItemTexture(getTagBlockId(recipe["result"])), tooltip = blockIdToName(getTagBlockId(recipe["result"]))))
+    return recipeLayout
+
+
+def cmdDialog(possebilities, text):
+    print(text)
+    count = 0
+    for i in possebilities:
+        print(count, i)
+        count += 1
+    while True:
         try:
-            if json.load(open("recipes/" + i))["group"] == tag.replace("tag:minecraft:", ""):
-                possebilities.append("minecraft:" + i.split("_from_")[0].replace(".json", ""))
-        except KeyError:
-            continue
-    if len(possebilities) == 0:
-        return None
-    elif len(possebilities) == 1:
-        return possebilities[0]
-    try:
-        return awnsered[str(possebilities)]
-    except KeyError:
-        print("What", tag.replace("tag:minecraft:", ""), "do you use?")
-        count = 0
-        for i in possebilities:
-            print(count, blockIdToName(i))
-            count += 1
+            number = int(input("The number:"))
+            if number >= len(possebilities):
+                print("Number is too large.")
+            elif number < 0:
+                print("Number is too small.")
+            else:
+                return number
+        except ValueError:
+            print("Needs to be a number.")
+
+
+def recipeChooseDialog(recipes, text):
+    if cmd:
+        possebilities = []
+        for recipe in recipes:
+            recipeDict = recipeToDict(recipe)
+            recipeName = craftingTypes[recipeDict["type"].replace("minecraft:", "")] + ":"
+            for material in recipeDict:
+                if "minecraft:" in material:
+                    try:
+                        int(recipeDict[material])
+                        materialCount = float(recipeDict[material]) * recipeDict["count"]
+                        if materialCount > int(materialCount):
+                            materialCount = int(materialCount) + 1
+                        else:
+                            materialCount = int(materialCount)
+                        recipeName += " " + str(materialCount) + "x " + blockIdToName(material)
+                    except ValueError:
+                        pass
+            recipeName += " = " + str(recipeDict["count"]) + "x " + blockIdToName(recipeDict["result"])
+            possebilities.append(recipeName)
+        return recipes[cmdDialog(possebilities, text)]
+    tabs = []
+    count = 0
+    names = []
+    for i in recipes:
+        tabName = craftingTypes[json.load(open("recipes/" + i + ".json"))["type"].replace("minecraft:", "")]
+        while tabName in names:
+            tabName = tabName + " "
+        names.append(tabName)
+        tabs.append(sg.Tab(tabName, getRecipeLayout(i), key = "tab" + str(count)))
+        count += 1
+    layout = [[sg.Text(text)], [sg.TabGroup([tabs], key = "Tab")]]
+    layout.append([sg.Button("Ok", bind_return_key = True), sg.Button("Cancel")])
+    if "test" in sys.argv:
+        recipe = recipes[0]
+    else:
+        window = sg.Window(text, layout)
         while True:
+            event, values = window.read()
+            if event == sg.WIN_CLOSED or event == "Cancel":
+                window.close()
+                exit()
+            if event == "Ok":
+                recipe = recipes[int(values["Tab"].replace("tab", ""))]
+                break
+        window.close()
+    return recipe
+
+
+def showList(dictList):
+    if cmd:
+        print("\nMaterials:")
+        print(convertDictToList(dictList))
+    else:
+        layout = []
+        for material in dictList:
+            count = dictList[material]
+            if count == int(count):
+                count = int(count)
+            else:
+               count = int(count + 1)
             try:
-                solution = possebilities[int(input("The Number:"))]
-                awnsered[str(possebilities)] = solution
-                return solution
-            except ValueError:
-                print("Needs to be a number!")
+                wayCount = ways[material][1]
+                if wayCount > int(wayCount):
+                    wayCount = int(wayCount + 1)
+                else:
+                    wayCount = int(wayCount)
+                way = str(wayCount) + "x " + blockIdToName(ways[material][0])
+            except KeyError:
+                way = ""
+            if way == "":
+                layout.append([sg.Image(data = getItemTexture(material)), sg.Text(str(count) + "x " + blockIdToName(material))])
+            else:
+                layout.append([sg.Image(data = getItemTexture(material)), sg.Text(str(count) + "x " + blockIdToName(material)), sg.Image(data = getItemTexture(ways[material][0])), sg.Text(way)])
+        height = len(layout) * 40
+        if height > 640:
+            height = 640
+        window = sg.Window("Material List", [[sg.Text("Material List:")], [sg.Column(layout, scrollable = True, size = (None, height))], [sg.FileSaveAs(enable_events = True, key = "SaveAs")]])
+        while True:
+            event, values = window.read()
+            if event == "SaveAs":
+                if values["SaveAs"] != "":
+                    listFile = open(values["SaveAs"], "w")
+                    listFile.write(convertDictToList(dictList))
+                    listFile.close()
+            if event == sg.WIN_CLOSED:
+                window.close()
+                return
 
 
-def convertListToRaw(materialList, prefix = "minecraft:", clear = True):
-    rawList = {}
-    for material, count in materialList.items():
-        if clear:
-            recipeDone.clear()
-        raw = convertToRaw(prefix + material, count)
-        rawList = mergeDicts(rawList, raw)
-    return rawList
+def convertPathToDict(path):
+    try:
+        dictList = convertListToDict(convertLitematicaList(open(path).read()))
+        if dictList == {}:
+            if cmd:
+                print("Error:", "Could not extract any data from file.")
+                exit(1)
+            else:
+                sg.Popup("Error:", "Could not extract any data from file.")
+        else:
+            newList = {}
+            for i in dictList:
+                newList["minecraft:" + i] = dictList[i]
+            return newList
+    except Exception as error:
+        if cmd:
+            print("Error:", error)
+            exit(1)
+        else:
+            sg.Popup("Error:", error)
 
 
-normalList = convertLitematicaList(open(sys.argv[2]).read())
-dictList = convertListToDict(normalList)
-rawList = convertListToRaw(dictList)
-print("\nMaterial list:")
-print(convertDictToList(rawList))
+def showMainWindow():
+    global recipeDone, recipeDoneWith, doneAt, awnsered, ways, lastMultiplier, config, langJson, langJsonInverted
+    path = os.path.join(config["minecraft"], "config/litematica")
+    if not os.path.exists(path):
+        path = None
+    layout = [[sg.Input(), sg.FileBrowse(initial_folder = path)],
+              [sg.Button("Calculate"), sg.Button("Show"), sg.Button("Config"), sg.Button("Close")]]
+    window = sg.Window("MinecraftRawMaterialCalculator", layout)
+    while True:
+        event, values = window.read()
+        if event == "Calculate":
+            window.hide()
+            selectedList = convertPathToDict(values[0])
+            if selectedList != None:
+                recipeDone = []
+                recipeDoneWith = {}
+                doneAt = {}
+                awnsered = {}
+                ways = {}
+                lastMultiplier = 1
+                rawList = convertListToRaw(selectedList, "")
+                showList(rawList)
+            window.un_hide()
+        if event == "Show":
+            window.hide()
+            selectedList = convertPathToDict(values[0])
+            if selectedList != None:
+                showList(selectedList)
+            window.un_hide()
+        if event == "Config":
+            window.hide()
+            configDialog.start()
+            config = json.load(open("config.json"))
+            otherConfig = json.load(open(config["config"]))
+            for key in otherConfig:
+                config[key] = otherConfig[key]
+            langJson, langJsonInverted = lang.getLang("lang/" + config["lang"] + ".json")
+            sg.theme(config["theme"])
+            window.un_hide()
+        if event == "Close" or event == sg.WIN_CLOSED:
+            break
+    window.close()
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 1:
+        cmd = False
+        showMainWindow()
+    else:
+        cmd = True
+        commands = {"help": ["show this help"],
+                "calc": ["calculate the raw materials needed", lambda path: showList(convertListToRaw(convertPathToDict(path)))],
+                "show": ["show the specified material list", lambda path: showList(convertPathToDict(path))]}
+        options = {"-h --help": "show this help",
+                   "-g --gui": "use the gui to display dialogs"}
+        filetypes = ["litematica material lists (txt format)"]
+        path = ""
+        for i in sys.argv[2:]:
+            if "-" == i[0]:
+                isOption = False
+                for option in options:
+                    if i in option.split(" "):
+                        isOption = True
+                        if option.split(" ")[0] == "-g":
+                            cmd = False
+                if not isOption:
+                    print("Unrecognized option:", i)
+                    exit(1)
+            if os.path.exists(i):
+                if path != "":
+                    print("This program can only process one file at a time.")
+                    exit(1)
+                path = i
+        if "help" in sys.argv or "-h" in sys.argv or "--help" in sys.argv:
+            print("Usage:")
+            print("mrmc <command> <file> <options>")
+            print("Commands:")
+            longest = 0
+            for command in commands:
+                if len(command) > longest:
+                    longest = len(command)
+            for command in commands:
+                length = longest - len(command)
+                print("   ", command, " " * length, commands[command][0])
+            print("Options:")
+            lognest = 0
+            for option in options:
+                if len(option) > longest:
+                    longest = len(option)
+            for option in options:
+                length = longest - len(option)
+                print("   ", option, " " * length, options[option])
+            print("Supported filetypes:")
+            for filetype in filetypes:
+                print("   ", filetype)
+        elif sys.argv[1] in commands and sys.argv[1] != "help":
+            if path == "":
+                print("You need to specify a path.")
+                exit(1)
+            commands[sys.argv[1]][1](path)
+        else:
+            print("Unrecognized command:", sys.argv[1])
+            exit(1)
