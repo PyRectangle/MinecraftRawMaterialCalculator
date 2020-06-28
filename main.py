@@ -692,7 +692,7 @@ if __name__ == "__main__":
                 path = i
         if "help" in sys.argv or "-h" in sys.argv or "--help" in sys.argv:
             print("Usage:")
-            print("mrmc <command> <file> <options>")
+            print("main.py <command> <file> <options>")
             print("Commands:")
             longest = 0
             for command in commands:
