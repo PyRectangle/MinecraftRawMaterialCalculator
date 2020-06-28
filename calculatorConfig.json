@@ -1,0 +1,8 @@
+{
+    "Ignore": [
+    ],
+    "StopAt": [
+        "honey_bottle"
+    ],
+    "lang": "en_us"
+}

@@ -1,9 +1,5 @@
 {
-	"Ignore": [
-	],
-	"StopAt": [
-		"honey_bottle",
-		"stone"
-	],
-	"lang": "en_us"
+    "theme": "LightGrey2",
+    "config": "./calculatorConfig.json",
+    "minecraft": "~/.minecraft"
 }

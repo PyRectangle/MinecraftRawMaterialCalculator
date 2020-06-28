@@ -619,7 +619,7 @@ def convertPathToDict(path):
 
 def showMainWindow():
     global recipeDone, recipeDoneWith, doneAt, awnsered, ways, lastMultiplier, config, langJson, langJsonInverted
-    path = os.path.join(config["minecraft"], "config/litematica")
+    path = os.path.expanduser(os.path.expandvars(os.path.join(config["minecraft"], "config/litematica")))
     if not os.path.exists(path):
         path = None
     layout = [[sg.Input(), sg.FileBrowse(initial_folder = path)],
