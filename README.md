@@ -1,18 +1,40 @@
 # MinecraftRawMaterialCalculator
-A command line tool, that lets you calculate the raw materials needed for a build from a litematica material list.
+An application, that lets you calculate the raw materials needed for a build from a litematica material list.
 ## Installation
+### Install Requirements
+- A minecraft install that has at least one non-modded version installed that needs to be 1.14 or higher
+- A working internet connection
+### Install instructions
 1. Install python 3.6 or newer from [python.org](https://www.python.org) or using your package manager.  
 2. Download or clone this repository.
-3. Run the `import.py` script with your minecraft path as parameter. (```python import.py <pathToYour.minecraftFolder>```) It will ask you from what version it should import the language and recipe files. It should work with 1.12 and higher. But I mostly tested with 1.15.2, so you might encounter some bugs.
-4. Try using it.
-## Usage
-`python main.py <config> <materialList>`  
-The config file is a json file that defines the following variables:  
+3. Install the dependencies: `pip install -r requirements.txt` (Only do this if you plan on using the gui. The command line version doesn't need these dependencies)
+4. Run the `import.py` script with your minecraft path as parameter. (`python import.py <pathToYour.minecraftFolder>`) It will ask you from what version it should import the assets. It should work with 1.14 and higher. But I mostly tested with 1.15.2, so you might encounter some bugs.
+5. Try using it.
+## Usage (Gui)
+To launch into the gui you just need to execute the `main.py` file without any arguments. The rest should be obvious.
+## Usage (Command line)
+```
+Usage:
+main.py <command> <file> <options>
+Commands:
+    help  show this help
+    calc  calculate the raw materials needed
+    show  show the specified material list
+Options:
+    -h --help  show this help
+    -g --gui   use the gui to display dialogs
+Supported filetypes:
+    litematica material lists (txt format)
+```
+The main config file is always called `config.json` and consists of the following variables:  
+`theme`: The theme the gui will use (You probably want to change this with the gui not by editing the file)  
+`config`: The config file that will be used to calculate the raw materials  
+`minecraft`: Path to your `.minecraft` folder (The import script should have set this already)  
+The config file for your calculations looks like this:  
 `Ignore`: A list of items that will be ignored from the material list. Useful if you're building with resource blocks.  
 `StopAt`: A list of items the program should stop at. For example if you have a lot of sticks you don't want the program to count them as planks because you already have them.  
 `lang`: The language code your game is in. That is required, because litematica converts the block ids to the actual names and this program uses it to ask questions about how you want to craft things.  
-A config could look like [this](config.json).
-## Example
+## Example (Command line)
 So for example a material list generated using litematica usually looks like this:
 ```
 +-------------------+-------+---------+-----------+
@@ -27,7 +49,7 @@ So for example a material list generated using litematica usually looks like thi
 ```
 You can use this tool on it:
 ```
-$ python main.py config.json materiallist.txt
+$ python main.py calc materiallist.txt
 How do you make Redstone Dust?
 0 Blast Furnace: Redstone Ore: 1 
 1 Crafting Table: Block of Redstone: 1 
