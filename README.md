@@ -26,6 +26,7 @@ Options:
 Supported filetypes:
     litematica material lists (txt format)
 ```
+### Config
 The main config file is always called `config.json` and consists of the following variables:  
 `theme`: The theme the gui will use (You probably want to change this with the gui not by editing the file)  
 `config`: The config file that will be used to calculate the raw materials  
