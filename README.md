@@ -4,15 +4,18 @@ An application, that lets you calculate the raw materials needed for a build fro
 ### Install Requirements
 - A minecraft install that has at least one non-modded version installed that needs to be 1.14 or higher
 - A working internet connection
-### Install instructions
+### Install instructions (Binary)
+Go to the release section of this repository and download the right binary for your platform. If your platform is not there, you can still run this program by running from source.
+### Install instructions (Source)
 1. Install python 3.6 or newer from [python.org](https://www.python.org) or using your package manager.  
 2. Download or clone this repository.
 3. Install the dependencies: `pip install -r requirements.txt` (Only do this if you plan on using the gui. The command line version doesn't need these dependencies)
-4. Run the `import.py` script with your minecraft path as parameter. (`python import.py <pathToYour.minecraftFolder>`) It will ask you from what version it should import the assets. It should work with 1.14 and higher. But I mostly tested with 1.15.2, so you might encounter some bugs.
+4. Start it for the first time. It will greet you with an import dialog. Impot your assets from 1.14 or higher.
 5. Try using it.
 ## Usage (Gui)
-To launch into the gui you just need to execute the `main.py` file without any arguments. The rest should be obvious.
+To launch into the gui you just need to execute the `main.py` file (or the desktop shortcut or the appimage depending on your installation) without any arguments. The rest should be obvious.
 ## Usage (Command line)
+Depending on your installation you will have to execute a different command to start the program. If you ran the installer for windows you will be able to run `mrmc help` in the cmd to get this message. If you downloaded the appimage you will have to run the appimage from terminal with the right arguments, otherwise you can just run `main.py` with some arguments.
 ```
 Usage:
 main.py <command> <file> <options>

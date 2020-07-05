@@ -1,14 +1,87 @@
 import sys
+import os
+nameMain = __name__ == "__main__"
+if nameMain:
+    try:
+        os.chdir(os.path.dirname(__file__))
+    except FileNotFoundError:
+        pass
+    sys.path.append(".")
+if os.path.exists(os.path.expanduser("~/.local/share/mrmc")):
+    os.chdir(os.path.expanduser("~/.local/share/mrmc"))
 needGui = len(sys.argv) == 1 or "-g" in sys.argv or "--gui" in sys.argv
+from importDialog import main as importDialog
+if needGui:
+    import PySimpleGUI as sg
+    if sys.platform == "win32":
+        sg.set_global_icon("icon.ico")
+    else:
+        sg.set_global_icon("icon.png")
+
+
+def checkImport():
+    for i in "ids.json", "itemTextures.json", "lang", "recipes", "spritesheet.png", "tags", "textures":
+        if not os.path.exists(i):
+            return False
+    return True
+
+
+def minecraftGetter():
+    if sys.platform == "win32":
+        path = "%appdata%\.minecraft"
+    elif sys.platform == "darwin":
+        path = "~/Library/Application Support/minecraft"
+    else:
+        path = "~/.minecraft"
+    path = os.path.expanduser(os.path.expandvars(path))
+    if os.path.exists(path):
+        return path
+    else:
+        wrong = True
+        while wrong:
+            wrong = False
+            if needGui:
+                path = sg.PopupGetFolder("Select your .minecraft folder.")
+                if path == None:
+                    exit(1)
+            else:
+                path = input("Select your .minecraft folder:")
+            if os.path.exists(path):
+                files = os.listdir(path)
+                for i in "versions", "assets":
+                    if not i in files:
+                        wrong = True
+            else:
+                wrong = True
+            if wrong:
+                if needGui:
+                    sg.Popup("This doesn't seem to be a .minecraft folder.")
+                else:
+                    print("This doesn't seem to be a .minecraft folder.")
+        return path
+
+
+if nameMain:
+    try:
+        if not checkImport() and needGui:
+            sg.Popup("You need to import some assets before you can use this program.")
+            importDialog(True, minecraftGetter())
+        elif not checkImport():
+            print("You need to import some assets before you can use this program.")
+            importDialog(False, minecraftGetter())
+    except PermissionError:
+        if needGui:
+            sg.Popup("You don't have permission to import assets.")
+        else:
+            print("You don't have permission to import assets")
+        exit(1)
 if needGui:
     from PIL import Image
-    import PySimpleGUI as sg
-    if __name__ == "__main__":
+    if nameMain:
         import config as configDialog
 import lang
 import json
 import io
-import os
 
 
 config = json.load(open("config.json"))
@@ -26,7 +99,7 @@ doneAt = {}
 awnsered = {}
 ways = {}
 lastMultiplier = 1
-craftingTypes = {"crafting_shaped": langJson["block.minecraft.crafting_table"], "crafting_shapeless": langJson["block.minecraft.crafting_table"], "smelting": langJson["container.furnace"], "blasting": langJson["container.blast_furnace"], "smoking": langJson["container.smoker"], "campfire_cooking": langJson["block.minecraft.campfire"], "stonecutting": langJson["container.stonecutter"]}
+craftingTypes = {"crafting_shaped": langJson["block.minecraft.crafting_table"], "crafting_shapeless": langJson["block.minecraft.crafting_table"], "smelting": langJson["container.furnace"], "blasting": langJson["container.blast_furnace"], "smoking": langJson["container.smoker"], "campfire_cooking": langJson["block.minecraft.campfire"], "stonecutting": langJson["container.stonecutter"], "smithing": langJson["block.minecraft.smithing_table"]}
 
 
 def convertLitematicaList(text):
@@ -272,7 +345,13 @@ def recipeToDict(blockId):
             solution = howToCraftDialog(possebilities, "minecraft:" + realId)
             materials[solution] = 1
         else:
-            materials[recipeJson["ingredient"]["item"]] = 1
+            try:
+                materials[recipeJson["ingredient"]["item"]] = 1
+            except KeyError:
+                materials["tag:" + recipeJson["ingredient"]["tag"]] = 1
+    if recipeJson["type"] == "minecraft:smithing":
+        materials[recipeJson["base"]["item"]] = 1
+        materials[recipeJson["addition"]["item"]] = 1
     materials["type"] = recipeJson["type"]
     return materials
 
@@ -366,7 +445,10 @@ def convertToRaw(item, multiplier = 1):
     if item.replace("minecraft:", "") in config["StopAt"]:
         return {item: multiplier}
     if item in doneAt:
-        ways[item][1] += doneAt[item][1] / doneAt[item][0] * multiplier
+        try:
+            ways[item][1] += doneAt[item][1] / doneAt[item][0] * multiplier
+        except KeyError:
+            pass
         try:
             returnRecipe = {}
             for material in recipeDoneWith[item]:
@@ -420,6 +502,16 @@ def convertToRaw(item, multiplier = 1):
         return {item: multiplier}
 
 
+def correctWays(raw):
+    global ways
+    delete = []
+    for item in ways:
+        if ways[item][0] in raw:
+            delete.append(item)
+    for item in delete:
+        del ways[item]
+
+
 def convertListToRaw(materialList, prefix = "minecraft:", clear = True):
     rawList = {}
     for material, count in materialList.items():
@@ -430,6 +522,7 @@ def convertListToRaw(materialList, prefix = "minecraft:", clear = True):
         else:
             raw = convertToRaw(prefix + material, count)
         rawList = mergeDicts(rawList, raw)
+    correctWays(rawList)
     return rawList
 
 
@@ -520,10 +613,10 @@ def recipeChooseDialog(recipes, text):
                             materialCount = int(materialCount) + 1
                         else:
                             materialCount = int(materialCount)
-                        recipeName += " " + str(materialCount) + "x " + blockIdToName(material)
+                        recipeName += " " + str(materialCount) + "x " + tagToName(blockIdToName(material))
                     except ValueError:
                         pass
-            recipeName += " = " + str(recipeDict["count"]) + "x " + blockIdToName(recipeDict["result"])
+            recipeName += " = " + str(recipeDict["count"]) + "x " + tagToName(blockIdToName(recipeDict["result"]))
             possebilities.append(recipeName)
         return recipes[cmdDialog(possebilities, text)]
     tabs = []
@@ -565,7 +658,7 @@ def showList(dictList):
             if count == int(count):
                 count = int(count)
             else:
-               count = int(count + 1)
+                count = int(count + 1)
             try:
                 wayCount = ways[material][1]
                 if wayCount > int(wayCount):
@@ -582,7 +675,7 @@ def showList(dictList):
         height = len(layout) * 40
         if height > 640:
             height = 640
-        window = sg.Window("Material List", [[sg.Text("Material List:")], [sg.Column(layout, scrollable = True, size = (None, height))], [sg.FileSaveAs(enable_events = True, key = "SaveAs")]])
+        window = sg.Window("Material List", [[sg.Text("Material List:", size = (14, 3))], [sg.Column(layout, scrollable = True, size = (None, height))], [sg.FileSaveAs(enable_events = True, key = "SaveAs")]])
         while True:
             event, values = window.read()
             if event == "SaveAs":
@@ -661,7 +754,7 @@ def showMainWindow():
     window.close()
 
 
-if __name__ == "__main__":
+if nameMain:
     if len(sys.argv) == 1:
         cmd = False
         showMainWindow()

@@ -28,16 +28,19 @@ def selectBlock():
     ids = json.load(open("ids.json"))
     ids.sort()
     height = int(len(ids) / 20 * 32 + 1)
+    column0 = [[sg.Graph((640, 480), (0, 0), (640, height), key = "pygame")],
+               [sg.Text("Selected Block:", size = (80, 1))]]
+    column1 = [[sg.Slider((100, 0), 0, disable_number_display = True, enable_events = True, key = "scroll", size = (25, 20))],
+               [sg.Button("Ok")]]
     layout = [[sg.Text("Search:"), sg.Input(key = "Search", enable_events = True)],
-              [sg.Graph((640, 480), (0, 0), (640, height), key = "pygame"), sg.Slider((100, 0), 0, disable_number_display = True, enable_events = True, key = "scroll", size = (25, 20))],
-              [sg.Text("Selected Block:", size = (88, 1)), sg.Button("Ok")]]
+              [sg.Column(column0), sg.Column(column1)]]
     window = sg.Window("Select a block", layout, finalize = True)
-    window.TKroot.bind("<MouseWheel>", mouseWheel)
     window.TKroot.bind("<Button-5>", mouseWheel)
     window.TKroot.bind("<Button-4>", mouseWheel)
-    window.TKroot.bind("<Button-3>", mousePress)
-    window.TKroot.bind("<Button-2>", mousePress)
-    window.TKroot.bind("<Button-1>", mousePress)
+    if sys.platform != "win32":
+        window.TKroot.bind("<Button-3>", mousePress)
+        window.TKroot.bind("<Button-2>", mousePress)
+        window.TKroot.bind("<Button-1>", mousePress)
     embed = window["pygame"].TKCanvas
     os.environ["SDL_WINDOWID"] = str(embed.winfo_id())
     if sys.platform == "win32":
@@ -52,6 +55,8 @@ def selectBlock():
         try:
             image = getItemTexture("minecraft:" + block, True)
             size = image.size
+            if size != (32, 32):
+                print(size)
             data = image.tobytes()
             mode = image.mode
             if mode != "RGBA":
@@ -76,19 +81,30 @@ def selectBlock():
     realSelect = None
     while True:
         for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 5:
+                    globalScroll += 1
+                elif event.button == 4:
+                    globalScroll -= 1
+                else:
+                    mousePressed = True
             if event.type == pygame.MOUSEMOTION:
                 pos = list(pygame.mouse.get_pos())
-                mousePos = ag.position()
-                windowPos = list(window.current_location())
-                mousePos = [mousePos.x - windowPos[0], mousePos.y - windowPos[1]]
-                offset = [mousePos[0] - pos[0], mousePos[1] - pos[1]]
+                if sys.platform == "win32":
+                    mousePos = pos
+                    mousePos[1] += scroll
+                else:
+                    mousePos = ag.position()
+                    windowPos = list(window.current_location())
+                    mousePos = [mousePos.x - windowPos[0], mousePos.y - windowPos[1]]
+                    offset = [mousePos[0] - pos[0], mousePos[1] - pos[1]]
         event, values = window.read(10, "loop")
         if event == "Search":
             if search != values["Search"]:
                 realSelect = None
                 search = values["Search"]
                 scroll = 0
-                window.element_list()[3].update(value = 0)
+                column1[0][0].update(value = 0)
         elif event == "scroll" or globalScroll != 0:
             values["scroll"] += globalScroll / (height - 480) * 5000
             if values["scroll"] > 100:
@@ -98,14 +114,15 @@ def selectBlock():
             scroll = int(values["scroll"] / 100 * (height - 480))
             if globalScroll != 0:
                 globalScroll = 0
-                window.element_list()[3].update(value = values["scroll"])
+                column1[0][0].update(value = values["scroll"])
             if height <= 480:
                 scroll = 0
-                window.element_list()[3].update(value = 0)
+                column1[0][0].update(value = 0)
         elif event == "loop":
-            mousePos = ag.position()
-            windowPos = list(window.current_location())
-            mousePos = [mousePos.x - windowPos[0] - offset[0], mousePos.y - windowPos[1] - offset[1] + scroll]
+            if sys.platform != "win32":
+                mousePos = ag.position()
+                windowPos = list(window.current_location())
+                mousePos = [mousePos.x - windowPos[0] - offset[0], mousePos.y - windowPos[1] - offset[1] + scroll]
             blockX = int(mousePos[0] / 32)
             blockY = int(mousePos[1] / 32)
             selectedBlock = blockY * 21 + blockX
@@ -120,7 +137,7 @@ def selectBlock():
             mousePressed = False
             if mouseInPygame:
                 try:
-                    window.element_list()[4].update("Selected Block: " + realIds[selectedBlock])
+                    column0[1][0].update("Selected Block: " + realIds[selectedBlock])
                     realSelect = selectedBlock
                 except (IndexError, TypeError):
                     pass
