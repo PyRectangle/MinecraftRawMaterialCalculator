@@ -55,8 +55,6 @@ def selectBlock():
         try:
             image = getItemTexture("minecraft:" + block, True)
             size = image.size
-            if size != (32, 32):
-                print(size)
             data = image.tobytes()
             mode = image.mode
             if mode != "RGBA":
