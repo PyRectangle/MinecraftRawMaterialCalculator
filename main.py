@@ -610,7 +610,7 @@ def getRecipeLayout(recipe):
                 return "Cancel"
             recipeLayout[row][i] = sg.Image(data = getItemTexture(blockId), tooltip = blockIdToName(blockId)) 
     middle = int(len(recipeLayout) / 2) 
-    recipeLayout[middle].append(sg.Text("➔ " + str(recipe["count"]) + "x"))
+    recipeLayout[middle].append(sg.Text("--> " + str(recipe["count"]) + "x"))
     tagBlockId = getTagBlockId(recipe["result"])
     if tagBlockId == "Cancel":
         return "Cancel"
