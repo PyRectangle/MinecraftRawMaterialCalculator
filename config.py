@@ -99,6 +99,7 @@ def selectBlock():
         event, values = window.read(10, "loop")
         if event == "Search":
             if search != values["Search"]:
+                column0[1][0].update("Selected Block:")
                 realSelect = None
                 search = values["Search"]
                 scroll = 0
