@@ -133,6 +133,16 @@ def convertLitematicaList(text):
     return normalizedList.replace("Item:Total\n", "")
 
 
+def convertCSVList(text):
+    text = text.replace(text[0:text.index("\n")] + "\n", "")
+    normalList = ""
+    for line in text.split("\n"):
+        line = line.split(",")
+        if len(line) > 1:
+            normalList += line[0].replace("\"", "") + ":" + line[1] + "\n"
+    return normalList
+
+
 def convertListToDict(text):
     materialDict = {}
     for line in text.split("\n"):
@@ -234,7 +244,7 @@ def howToCraftDialog(possebilities, blockId):
         event, values = window.read()
         window.close()
         if event == "Cancel" or event == sg.WIN_CLOSED:
-            exit()
+            return "Cancel"
         if event == "Ok":
             for i in values:
                 if values[i]:
@@ -281,6 +291,8 @@ def recipeToDict(blockId):
                     except KeyError:
                         possebilities.append("tag:" + i["tag"])
                 solution = howToCraftDialog(possebilities, "minecraft:" + realId)
+                if solution == "Cancel":
+                    return "Cancel"
                 materials[solution] = recipeString.count(key) / count
             else:
                 try:
@@ -303,6 +315,8 @@ def recipeToDict(blockId):
                     except KeyError:
                         possebilities.append("tag:" + p["tag"])
                 solution = howToCraftDialog(possebilities, "minecraft:" + realId)
+                if solution == "Cancel":
+                    return "Cancel"
                 materials[solution] = itemCount / count
             else:
                 try:
@@ -334,6 +348,8 @@ def recipeToDict(blockId):
                         except KeyError:
                             possebilities.append("tag:" + i["tag"])
                     solution = howToCraftDialog(possebilities, "minecraft:" + realId)
+                    if solution == "Cancel":
+                        return "Cancel"
                     materials[solution] = 1
     if recipeJson["type"] == "minecraft:stonecutting":
         materials[recipeJson["ingredient"]["item"]] = 1 / recipeJson["count"]
@@ -343,6 +359,8 @@ def recipeToDict(blockId):
             for i in recipeJson["ingredient"]:
                 possebilities.append(i["item"])
             solution = howToCraftDialog(possebilities, "minecraft:" + realId)
+            if solution == "Cancel":
+                    return "Cancel"
             materials[solution] = 1
         else:
             try:
@@ -395,7 +413,7 @@ def tagDialog(tag, possebilities):
         event, values = window.read()
         window.close()
         if event == "Cancel" or event == sg.WIN_CLOSED:
-            exit()
+            return "Cancel"
         if event == "Ok":
             for i in values:
                 if values[i]:
@@ -422,6 +440,8 @@ def getTagBlockId(tag):
                 awnsered[str(possebilities)] = possebilities[0]
                 return possebilities[0]
             number = tagDialog(tag, possebilities.copy())
+            if number == "Cancel":
+                return "Cancel"
             if possebilities[number][0] == "#":
                 returnTag = getTagBlockId(possebilities[number].replace("#", "tag:"))
                 awnsered[str(possebilities)] = returnTag
@@ -438,6 +458,8 @@ def convertToRaw(item, multiplier = 1):
     global lastMultiplier
     if "tag:" in item:
         tagitem = getTagBlockId(item)
+        if tagitem == "Cancel":
+            return "Cancel"
         if tagitem == None:
             return {item: multiplier}
         else:
@@ -484,16 +506,22 @@ def convertToRaw(item, multiplier = 1):
         except KeyError:
             count = 0
             recipe = recipeChooseDialog(possebilities, "How do you make " + blockIdToName(item) + "?")
+            if recipe == "Cancel":
+                return "Cancel"
             awnsered[str(possebilities)] = recipe
     else:
         recipe = possebilities[0]
     try:
         recipeDict = recipeToDict(recipe)
+        if recipeDict == "Cancel":
+            return "Cancel"
         realRecipeDict = {}
         for material in recipeDict:
             if "minecraft:" in material:
                 realRecipeDict[material] = multiplier * recipeDict[material]
         recipeDoneWith[item] = convertListToRaw(realRecipeDict, "" , False)
+        if recipeDoneWith[item] == "Cancel":
+            return "Cancel"
         returnRecipe = recipeDoneWith[item].copy()
         for material in recipeDoneWith[item]:
             recipeDoneWith[item][material] /= multiplier
@@ -521,6 +549,8 @@ def convertListToRaw(materialList, prefix = "minecraft:", clear = True):
             raw = convertToRaw(material, count)
         else:
             raw = convertToRaw(prefix + material, count)
+        if raw == "Cancel":
+            return "Cancel"
         rawList = mergeDicts(rawList, raw)
     correctWays(rawList)
     return rawList
@@ -543,6 +573,8 @@ if "test" in sys.argv:
 
 def getRecipeLayout(recipe):
     recipe = recipeToDict(recipe)
+    if recipe == "Cancel":
+        return "Cancel"
     recipeLayout = []
     if recipe["type"] == "minecraft:crafting_shaped":
         for i in recipe["shape"]:
@@ -553,6 +585,8 @@ def getRecipeLayout(recipe):
                     blockId = "empty"
                 else:
                     blockId = getTagBlockId(recipe["keys"][recipeLayout[row][i]])
+                    if blockId == "Cancel":
+                        return "Cancel"
                 recipeLayout[row][i] = blockId
     else:
         row = []
@@ -572,10 +606,15 @@ def getRecipeLayout(recipe):
     for row in range(len(recipeLayout)):
         for i in range(len(recipeLayout[row])):
             blockId = getTagBlockId(recipeLayout[row][i])
+            if blockId == "Cancel":
+                return "Cancel"
             recipeLayout[row][i] = sg.Image(data = getItemTexture(blockId), tooltip = blockIdToName(blockId)) 
     middle = int(len(recipeLayout) / 2) 
     recipeLayout[middle].append(sg.Text("➔ " + str(recipe["count"]) + "x"))
-    recipeLayout[middle].append(sg.Image(data = getItemTexture(getTagBlockId(recipe["result"])), tooltip = blockIdToName(getTagBlockId(recipe["result"]))))
+    tagBlockId = getTagBlockId(recipe["result"])
+    if tagBlockId == "Cancel":
+        return "Cancel"
+    recipeLayout[middle].append(sg.Image(data = getItemTexture(tagBlockId), tooltip = blockIdToName(tagBlockId)))
     return recipeLayout
 
 
@@ -603,6 +642,8 @@ def recipeChooseDialog(recipes, text):
         possebilities = []
         for recipe in recipes:
             recipeDict = recipeToDict(recipe)
+            if recipeDict == "Cancel":
+                return "Cancel"
             recipeName = craftingTypes[recipeDict["type"].replace("minecraft:", "")] + ":"
             for material in recipeDict:
                 if "minecraft:" in material:
@@ -627,7 +668,10 @@ def recipeChooseDialog(recipes, text):
         while tabName in names:
             tabName = tabName + " "
         names.append(tabName)
-        tabs.append(sg.Tab(tabName, getRecipeLayout(i), key = "tab" + str(count)))
+        recipeLayout = getRecipeLayout(i)
+        if recipeLayout == "Cancel":
+            return "Cancel"
+        tabs.append(sg.Tab(tabName, recipeLayout, key = "tab" + str(count)))
         count += 1
     layout = [[sg.Text(text)], [sg.TabGroup([tabs], key = "Tab")]]
     layout.append([sg.Button("Ok", bind_return_key = True), sg.Button("Cancel")])
@@ -639,7 +683,7 @@ def recipeChooseDialog(recipes, text):
             event, values = window.read()
             if event == sg.WIN_CLOSED or event == "Cancel":
                 window.close()
-                exit()
+                return "Cancel"
             if event == "Ok":
                 recipe = recipes[int(values["Tab"].replace("tab", ""))]
                 break
@@ -648,6 +692,12 @@ def recipeChooseDialog(recipes, text):
 
 
 def showList(dictList):
+    if dictList == "Cancel":
+        if cmd:
+            print("Operation aborted by user.")
+        else:
+            sg.Popup("Operation aborted by user.")
+        return
     if cmd:
         print("\nMaterials:")
         print(convertDictToList(dictList))
@@ -675,7 +725,7 @@ def showList(dictList):
         height = len(layout) * 40
         if height > 640:
             height = 640
-        window = sg.Window("Material List", [[sg.Text("Material List:", size = (14, 3))], [sg.Column(layout, scrollable = True, size = (None, height))], [sg.FileSaveAs(enable_events = True, key = "SaveAs")]])
+        window = sg.Window("Material List", [[sg.Text("Material List:", size = (14, 3))], [sg.Column(layout, scrollable = True, size = (None, height))], [sg.FileSaveAs(enable_events = True, key = "SaveAs", file_types = [("TXT Files", "*.txt")])]])
         while True:
             event, values = window.read()
             if event == "SaveAs":
@@ -690,7 +740,18 @@ def showList(dictList):
 
 def convertPathToDict(path):
     try:
-        dictList = convertListToDict(convertLitematicaList(open(path).read()))
+        content = open(path).read()
+        try:
+            dictList = convertListToDict(convertLitematicaList(content))
+        except Exception:
+            dictList = {}
+        if dictList == {}:
+            try:
+                dictList = convertListToDict(convertCSVList(content))
+            except Exception:
+                pass
+        if dictList == {}:
+            dictList = convertListToDict(content)
         if dictList == {}:
             if cmd:
                 print("Error:", "Could not extract any data from file.")
@@ -715,11 +776,18 @@ def showMainWindow():
     path = os.path.expanduser(os.path.expandvars(os.path.join(config["minecraft"], "config/litematica")))
     if not os.path.exists(path):
         path = None
-    layout = [[sg.Input(), sg.FileBrowse(initial_folder = path)],
-              [sg.Button("Calculate"), sg.Button("Show"), sg.Button("Config"), sg.Button("Close")]]
+    layout = [[sg.Input(), sg.FileBrowse(file_types = [("TXT Files", "*.txt"), ("CSV Files", "*.csv")], initial_folder = path)],
+              [sg.Button("Calculate"), sg.Button("Show"), sg.Button("Config"), sg.Button("Import"), sg.Button("Close")]]
     window = sg.Window("MinecraftRawMaterialCalculator", layout)
     while True:
         event, values = window.read()
+        if event == "Import":
+            window.hide()
+            if os.path.exists(config["minecraft"]):
+                importDialog(True, config["minecraft"])
+            else:
+                importDialog(True, minecraftGetter())
+            window.un_hide()
         if event == "Calculate":
             window.hide()
             selectedList = convertPathToDict(values[0])
@@ -761,8 +829,9 @@ if nameMain:
     else:
         cmd = True
         commands = {"help": ["show this help"],
-                "calc": ["calculate the raw materials needed", lambda path: showList(convertListToRaw(convertPathToDict(path)))],
-                "show": ["show the specified material list", lambda path: showList(convertPathToDict(path))]}
+                    "calc": ["calculate the raw materials needed", lambda path: showList(convertListToRaw(convertPathToDict(path)))],
+                    "show": ["show the specified material list", lambda path: showList(convertPathToDict(path))],
+                    "import": ["import new assets", lambda: importDialog(False, minecraftGetter())]}
         options = {"-h --help": "show this help",
                    "-g --gui": "use the gui to display dialogs"}
         filetypes = ["litematica material lists (txt format)"]
@@ -806,10 +875,13 @@ if nameMain:
             for filetype in filetypes:
                 print("   ", filetype)
         elif sys.argv[1] in commands and sys.argv[1] != "help":
-            if path == "":
+            if path == "" and sys.argv[1] != "import":
                 print("You need to specify a path.")
                 exit(1)
-            commands[sys.argv[1]][1](path)
+            if sys.argv[1] == "import":
+                commands[sys.argv[1]][1]()
+            else:
+                commands[sys.argv[1]][1](path)
         else:
             print("Unrecognized command:", sys.argv[1])
             exit(1)

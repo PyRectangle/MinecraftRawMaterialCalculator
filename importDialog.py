@@ -10,6 +10,14 @@ import ssl
 ssl._create_default_https_context = ssl._create_unverified_context
 
 
+def progress(window, layout, number):
+    if layout != None and window != None:
+        layout[1][0].update_bar(number)
+        window.refresh()
+    else:
+        print(str(int(number / 8 * 10) / 10) + "%  ", end = "\r")
+
+
 def main(gui, minecraftFolder):
     versions = os.listdir(os.path.join(minecraftFolder, "versions"))
     versions.sort()
@@ -72,6 +80,14 @@ def main(gui, minecraftFolder):
                 time.sleep(1)
         else:
             break
+    if gui:
+        layout = [[sg.Text("Importing assets...")],
+                  [sg.ProgressBar(800, size = (50, 10))]]
+        window = sg.Window("Progress", layout)
+        window.read(0)
+    else:
+        layout = None
+        window = None
     indexes = json.load(open(os.path.join(minecraftFolder, "assets/indexes", indexFile)))
     try:
         os.makedirs("lang", exist_ok = True)
@@ -86,7 +102,10 @@ def main(gui, minecraftFolder):
             os.makedirs(os.path.expanduser("~/.local/share/mrmc/lang"), exist_ok = True)
             shutil.copy("icon.png", os.path.expanduser("~/.local/share/mrmc/icon.png"))
             os.chdir(os.path.expanduser("~/.local/share/mrmc"))
+    count = 0
     for i in indexes["objects"]:
+        count += 1
+        progress(window, layout, int(count / len(indexes["objects"]) * 100))
         if "minecraft/lang" in i:
             fileHash = indexes["objects"][i]["hash"]
             path = os.path.join(minecraftFolder, "assets/objects", fileHash[0:2], fileHash)
@@ -95,14 +114,21 @@ def main(gui, minecraftFolder):
     prefix = None
     os.makedirs("recipesExtract", exist_ok = True)
     langFiles = []
-    for i in jarFile.namelist():
+    count = 0
+    jarFileNamelist = jarFile.namelist()
+    for i in jarFileNamelist:
+        count += 1
+        progress(window, layout, 100 + int(count / len(jarFileNamelist) * 100))
         if "minecraft/recipes" in i:
             prefix = os.path.dirname(i)
             jarFile.extract(i, "recipesExtract")
         if "assets/minecraft/lang/" in i:
             langFiles.append(i)
             jarFile.extract(i, "lang")
+    count = 0
     for langFile in langFiles:
+        count += 1
+        progress(window, layout, 200 + int(count / len(langFiles) * 100))
         shutil.move("lang/" + langFile, "lang/" + os.path.basename(langFile))
     shutil.rmtree("lang/assets")
     if os.path.exists("recipes"):
@@ -114,10 +140,15 @@ def main(gui, minecraftFolder):
     spritesheet = open("spritesheet.png", "wb")
     spritesheet.write(urlopen("https://minecraft.gamepedia.com" + urlopen("https://minecraft.gamepedia.com/Template:InvSprite").read().decode().split("background-image:url(")[1].split(")")[0]).read())
     spritesheet.close()
+    progress(window, layout, 310)
     rawLua = urlopen("https://minecraft.gamepedia.com/Module:InvSprite").read().decode().replace("&quot;", "'").split("ids = {\n")[1].split("</pre>")[0].split("\n")
+    progress(window, layout, 320)
     del rawLua[-3:]
     itemTextures = {}
+    count = 0
     for i in rawLua:
+        count += 1
+        progress(window, layout, 320 + int(count / len(rawLua) * 70))
         if "['" in i:
             name = i.split("['")[1].split("']")[0]
         else:
@@ -137,7 +168,11 @@ def main(gui, minecraftFolder):
     site = urlopen("https://minecraft.gamepedia.com/Block").read().decode()
     os.makedirs("textures", exist_ok = True)
     os.makedirs("tags", exist_ok = True)
+    progress(window, layout, 400)
+    count = 0
     for i in langJson:
+        count += 1
+        progress(window, layout, 400 + int(count / len(langJson) * 100))
         if "block." == i[0:6]:
             if not i.replace("block.minecraft.", "minecraft:") in itemTextures:
                 url = site.split(">" + langJson[i] + "<")[0].split("1.5x, ")[-1].split(" 2x")[0]
@@ -148,7 +183,10 @@ def main(gui, minecraftFolder):
     os.makedirs("itemExtract", exist_ok = True)
     os.makedirs("tagExtract", exist_ok = True)
     jarFile = zipfile.ZipFile(open(os.path.join(minecraftFolder, "versions", version, version + ".jar"), "rb"))
-    for i in jarFile.namelist():
+    count = 0
+    for i in jarFileNamelist:
+        count += 1
+        progress(window, layout, 500 + int(count / len(jarFileNamelist) * 100))
         if "assets/minecraft/textures/item" in i:
             name = i.replace("assets/minecraft/textures/item/", "").split("_")
             for index in range(len(name)):
@@ -189,16 +227,23 @@ def main(gui, minecraftFolder):
                     realName += part + "_"
             realName = realName[0:-1].replace(".json", "")
             if not realName in ids:
-                ids.append(realName) 
+                ids.append(realName)
     for tagType in "fluids", "entity_types", "blocks", "items":
         for filename in os.listdir("tagExtract/data/minecraft/tags/" + tagType):
             shutil.move("tagExtract/data/minecraft/tags/" + tagType + "/" + filename, "tags/" + filename)
-    for filename in os.listdir("itemExtract/assets/minecraft/textures/item"):
+    count = 0
+    dirList = os.listdir("itemExtract/assets/minecraft/textures/item")
+    for filename in dirList:
+        count += 1
+        progress(window, layout, 600 + int(count / len(dirList) * 100))
         shutil.move("itemExtract/assets/minecraft/textures/item/" + filename, "textures/" + filename)
     shutil.rmtree("itemExtract")
     shutil.rmtree("tagExtract")
     realIds = []
+    count = 0
     for i in ids:
+        count += 1
+        progress(window, layout, 700 + int(count / len(ids) * 100))
         isWrong = "spawn_egg" == i or "_wall_" in i or "_armor_slot_" in i or "tipped_arrow" in i or "_air" in i or "wall_torch" in i or "crossbow_" in i or "ruby" in i or "_overlay" in i
         if not isWrong:
             realIds.append(i)
@@ -211,3 +256,5 @@ def main(gui, minecraftFolder):
             json.dump({"Ignore": [], "StopAt": ["honey_bottle"], "lang": "en_us"}, open(config["config"], "w"))
     config["minecraft"] = os.path.expanduser(minecraftFolder)
     json.dump(config, open("config.json", "w"), indent = 4)
+    if gui:
+        window.close()
