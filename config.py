@@ -175,14 +175,14 @@ def selectBlock():
 def createWindow(defval = None):
     sg.change_look_and_feel(defval)
     sg.theme(defval)
-    layout = [[sg.Combo(sg.theme_list(), defval)],
+    layout = [[sg.Text("Theme:"), sg.Combo(sg.theme_list(), defval)],
               [sg.Text("Config Location:"), sg.Input(config["config"]), sg.FileSaveAs("Browse", file_types = [("JSON Files", "*.json")])],
               [sg.Text("Minecraft folder:"), sg.Input(config["minecraft"]), sg.FolderBrowse()]]
     diff = ""
     for i in realConfig:
         if type(realConfig[i]) == list:
-            layout.append([sg.Text(i), sg.Listbox(realConfig[i].copy(), select_mode = sg.LISTBOX_SELECT_MODE_MULTIPLE, size = (50, 10), right_click_menu = [None, ["Add" + diff, "Remove" + diff]], key = i, tooltip = "Right click to Add/Remove")])
-            configIndexes[i] = len(layout) * 2
+            configIndexes[i] = sum([len(row) for row in layout]) + 2 + len(diff) * 3
+            layout.append([sg.Text(i), sg.Column([[sg.Listbox(realConfig[i].copy(), select_mode = sg.LISTBOX_SELECT_MODE_MULTIPLE, size = (50, 10), key = i)], [sg.Button("Add", key = "Add" + diff), sg.Button("Remove", key = "Remove" + diff)]])])
             diff += " "
         if i == "lang":
             langs = os.listdir("lang")
@@ -206,7 +206,8 @@ def save(values):
 
 
 def saveToFile():
-    sg.Popup("You might have to restart for some changes to take effect.")
+    if json.load(open("config.json"))["theme"] != config["theme"]:
+        sg.Popup("You might have to restart for some changes to take effect.")
     json.dump(config, open("config.json", "w"), indent = 4)
     json.dump(realConfig, open(config["config"], "w"), indent = 4)
 
