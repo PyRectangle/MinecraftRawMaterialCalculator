@@ -37,7 +37,7 @@ def selectBlock():
     layout[1][1].expand(False, True, False)
     column1[0][0].expand(False, True)
     window.TKroot.bind("<Button-5>", mouseWheel)
-    window.TKroot.bind("<Button-4>", mouseWheel) 
+    window.TKroot.bind("<Button-4>", mouseWheel)
     if sys.platform != "win32":
         window.TKroot.bind("<Button-3>", mousePress)
         window.TKroot.bind("<Button-2>", mousePress)
