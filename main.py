@@ -834,7 +834,7 @@ if nameMain:
                     "import": ["import new assets", lambda: importDialog(False, minecraftGetter())]}
         options = {"-h --help": "show this help",
                    "-g --gui": "use the gui to display dialogs"}
-        filetypes = ["litematica material lists (txt format)"]
+        filetypes = ["litematica material lists (txt format)", "litematica material lists (csv format)"]
         path = ""
         for i in sys.argv[2:]:
             if "-" == i[0]:
