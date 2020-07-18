@@ -1,7 +1,6 @@
 from main import getItemTexture
 from PIL import Image
 import PySimpleGUI as sg
-import pyautogui as ag
 import os
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
@@ -38,7 +37,7 @@ def selectBlock():
     layout[1][1].expand(False, True, False)
     column1[0][0].expand(False, True)
     window.TKroot.bind("<Button-5>", mouseWheel)
-    window.TKroot.bind("<Button-4>", mouseWheel)
+    window.TKroot.bind("<Button-4>", mouseWheel) 
     if sys.platform != "win32":
         window.TKroot.bind("<Button-3>", mousePress)
         window.TKroot.bind("<Button-2>", mousePress)
@@ -94,10 +93,10 @@ def selectBlock():
                     mousePos = pos
                     mousePos[1] += scroll
                 else:
-                    mousePos = ag.position()
+                    mousePos = list(window.TKroot.winfo_pointerxy())
                     windowPos = list(window.current_location())
-                    mousePos = [mousePos.x - windowPos[0], mousePos.y - windowPos[1]]
-                    offset = [mousePos[0] - pos[0], mousePos[1] - pos[1]]
+                    mousePos = [mousePos[i] - windowPos[i] for i in range(2)]
+                    offset = [mousePos[i] - pos[i] for i in range(2)]
         event, values = window.read(10, "loop")
         if event == "Search":
             if search != values["Search"]:
@@ -121,9 +120,9 @@ def selectBlock():
                 column1[0][0].update(value = 0)
         elif event == "loop":
             if sys.platform != "win32":
-                mousePos = ag.position()
+                mousePos = list(window.TKroot.winfo_pointerxy())
                 windowPos = list(window.current_location())
-                mousePos = [mousePos.x - windowPos[0] - offset[0], mousePos.y - windowPos[1] - offset[1] + scroll]
+                mousePos = [mousePos[0] - windowPos[0] - offset[0], mousePos[1] - windowPos[1] - offset[1] + scroll]
             blockX = int(mousePos[0] / 32)
             blockY = int(mousePos[1] / 32)
             selectedBlock = blockY * 21 + blockX
