@@ -189,7 +189,7 @@ def convertDictToList(dictList):
 def getItemTexture(itemId, pil = False):
     try:
         item = Image.open("textures/" + itemId.replace("minecraft:", "") + ".png")
-        item = item.resize((32, 32))
+        item = item.resize((32, 32), Image.NEAREST)
     except FileNotFoundError:
         pos = idPos[itemId]
         y = int(pos / 32) * 32
