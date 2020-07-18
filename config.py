@@ -30,11 +30,13 @@ def selectBlock():
     height = int(len(ids) / 20 * 32 + 1)
     column0 = [[sg.Graph((640, 480), (0, 0), (640, height), key = "pygame")],
                [sg.Text("Selected Block:", size = (80, 1))]]
-    column1 = [[sg.Slider((100, 0), 0, disable_number_display = True, enable_events = True, key = "scroll", size = (25, 20))],
+    column1 = [[sg.Slider((100, 0), 0, disable_number_display = True, enable_events = True, key = "scroll")],
                [sg.Button("Ok")]]
     layout = [[sg.Text("Search:"), sg.Input(key = "Search", enable_events = True)],
               [sg.Column(column0), sg.Column(column1)]]
     window = sg.Window("Select a block", layout, finalize = True)
+    layout[1][1].expand(False, True, False)
+    column1[0][0].expand(False, True)
     window.TKroot.bind("<Button-5>", mouseWheel)
     window.TKroot.bind("<Button-4>", mouseWheel)
     if sys.platform != "win32":
