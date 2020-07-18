@@ -74,7 +74,6 @@ def selectBlock():
             pass
     pygame.display.update()
     search = ""
-    offset = [0, 0]
     selectedBlock = 0
     scroll = 0
     realSelect = None
@@ -92,11 +91,6 @@ def selectBlock():
                 if sys.platform == "win32":
                     mousePos = pos
                     mousePos[1] += scroll
-                else:
-                    mousePos = list(window.TKroot.winfo_pointerxy())
-                    windowPos = list(window.current_location())
-                    mousePos = [mousePos[i] - windowPos[i] for i in range(2)]
-                    offset = [mousePos[i] - pos[i] for i in range(2)]
         event, values = window.read(10, "loop")
         if event == "Search":
             if search != values["Search"]:
@@ -121,8 +115,7 @@ def selectBlock():
         elif event == "loop":
             if sys.platform != "win32":
                 mousePos = list(window.TKroot.winfo_pointerxy())
-                windowPos = list(window.current_location())
-                mousePos = [mousePos[0] - windowPos[0] - offset[0], mousePos[1] - windowPos[1] - offset[1] + scroll]
+                mousePos = [mousePos[0] - window["pygame"].TKCanvas.winfo_rootx(), mousePos[1] - window["pygame"].TKCanvas.winfo_rooty() + scroll]
             blockX = int(mousePos[0] / 32)
             blockY = int(mousePos[1] / 32)
             selectedBlock = blockY * 21 + blockX
