@@ -20,9 +20,10 @@ Depending on your installation you will have to execute a different command to s
 Usage:
 main.py <command> <file> <options>
 Commands:
-    help  show this help
-    calc  calculate the raw materials needed
-    show  show the specified material list
+    help    show this help
+    calc    calculate the raw materials needed
+    show    show the specified material list
+    import  import new assets
 Options:
     -h --help  show this help
     -g --gui   use the gui to display dialogs
