@@ -1,5 +1,6 @@
 import sys
 import os
+import time
 nameMain = __name__ == "__main__"
 if nameMain:
     try:
@@ -20,8 +21,8 @@ if needGui:
 
 
 def checkImport():
-    for i in "ids.json", "itemTextures.json", "lang", "recipes", "spritesheet.png", "tags", "textures":
-        if not os.path.exists(i):
+    for path in "ids.json", "itemTextures.json", "lang", "recipes", "spritesheet.png", "tags", "textures":
+        if not os.path.exists(path):
             return False
     return True
 
@@ -63,12 +64,16 @@ def minecraftGetter():
 
 if nameMain:
     try:
-        if not checkImport() and needGui:
-            sg.Popup("You need to import some assets before you can use this program.")
-            importDialog(True, minecraftGetter())
-        elif not checkImport():
-            print("You need to import some assets before you can use this program.")
-            importDialog(False, minecraftGetter())
+        if not checkImport():
+            if needGui:
+                sg.Popup("You need to import some assets before you can use this program.")
+                if importDialog(True, minecraftGetter()) != 0:
+                    exit()
+            else:
+                print("You need to import some assets before you can use this program.")
+                time.sleep(1)
+                if importDialog(False, minecraftGetter()) != 0:
+                    exit()
     except PermissionError:
         if needGui:
             sg.Popup("You don't have permission to import assets.")
@@ -99,7 +104,16 @@ doneAt = {}
 awnsered = {}
 ways = {}
 lastMultiplier = 1
-craftingTypes = {"crafting_shaped": langJson["block.minecraft.crafting_table"], "crafting_shapeless": langJson["block.minecraft.crafting_table"], "smelting": langJson["container.furnace"], "blasting": langJson["container.blast_furnace"], "smoking": langJson["container.smoker"], "campfire_cooking": langJson["block.minecraft.campfire"], "stonecutting": langJson["container.stonecutter"], "smithing": langJson["block.minecraft.smithing_table"]}
+craftingTypes = {
+        "crafting_shaped": langJson["block.minecraft.crafting_table"],
+        "crafting_shapeless": langJson["block.minecraft.crafting_table"],
+        "smelting": langJson["container.furnace"],
+        "blasting": langJson["container.blast_furnace"],
+        "smoking": langJson["container.smoker"],
+        "campfire_cooking": langJson["block.minecraft.campfire"],
+        "stonecutting": langJson["container.stonecutter"],
+        "smithing": langJson["block.minecraft.smithing_table"]
+}
 
 
 def convertLitematicaList(text):
@@ -124,8 +138,8 @@ def convertLitematicaList(text):
             for i in range(spaceCount):
                 del materialNameList[0]
             materialNameList.reverse()
-            for i in materialNameList:
-                materialName += i
+            for char in materialNameList:
+                materialName += char
             try:
                 normalizedList += materialName + ":" + str(int(material[1])) + "\n"
             except ValueError:
@@ -302,37 +316,37 @@ def recipeToDict(blockId):
                 materials[solution] = recipeString.count(key) / count 
             materials["keys"][key] = solution
     if recipeJson["type"] == "minecraft:crafting_shapeless":
-        for i in recipeJson["ingredients"]:
-            if type(i) == list:
+        for ingredient in recipeJson["ingredients"]:
+            if type(ingredient) == list:
                 possebilities = []
-                for p in i:
+                for item in ingredient:
                     try:
-                        itemCount = p["count"]
+                        itemCount = item["count"]
                     except KeyError:
                         itemCount = 1
                     try:
-                        possebilities.append(p["item"])
+                        possebilities.append(item["item"])
                     except KeyError:
-                        possebilities.append("tag:" + p["tag"])
+                        possebilities.append("tag:" + item["tag"])
                 solution = howToCraftDialog(possebilities, "minecraft:" + realId)
                 if solution == "Cancel":
                     return "Cancel"
                 materials[solution] = itemCount / count
             else:
                 try:
-                    itemCount = i["count"]
+                    itemCount = ingredient["count"]
                 except KeyError:
                     itemCount = 1
                 try:
                     try:
-                        materials[i["item"]] += itemCount / count
+                        materials[ingredient["item"]] += itemCount / count
                     except KeyError:
-                        materials["tag:" + i["tag"]] += itemCount / count
+                        materials["tag:" + ingredient["tag"]] += itemCount / count
                 except KeyError:
                     try:
                         materials[i["item"]] = itemCount / count
                     except KeyError:
-                        materials["tag:" + i["tag"]] = itemCount / count
+                        materials["tag:" + ingredient["tag"]] = itemCount / count
     if recipeJson["type"] == "minecraft:smelting":
         try:
             materials[recipeJson["ingredient"]["item"]] = 1
@@ -342,11 +356,11 @@ def recipeToDict(blockId):
             except (KeyError, TypeError):
                 if type(recipeJson["ingredient"]) == list:
                     possebilities = []
-                    for i in recipeJson["ingredient"]:
+                    for ingredient in recipeJson["ingredient"]:
                         try:
-                            possebilities.append(i["item"])
+                            possebilities.append(ingredient["item"])
                         except KeyError:
-                            possebilities.append("tag:" + i["tag"])
+                            possebilities.append("tag:" + ingredient["tag"])
                     solution = howToCraftDialog(possebilities, "minecraft:" + realId)
                     if solution == "Cancel":
                         return "Cancel"
@@ -356,8 +370,8 @@ def recipeToDict(blockId):
     if recipeJson["type"] == "minecraft:blasting" or recipeJson["type"] == "minecraft:smoking" or recipeJson["type"] == "minecraft:campfire_cooking":
         if type(recipeJson["ingredient"]) == list:
             possebilities = []
-            for i in recipeJson["ingredient"]:
-                possebilities.append(i["item"])
+            for ingredient in recipeJson["ingredient"]:
+                possebilities.append(ingredient["item"])
             solution = howToCraftDialog(possebilities, "minecraft:" + realId)
             if solution == "Cancel":
                     return "Cancel"
@@ -393,8 +407,8 @@ def tagDialog(tag, possebilities):
     layout = [[sg.Text(text)]]
     first = True
     count = 0
-    for i in possebilities:
-        tagId = i.replace("#", "").replace("tag:", "")
+    for possebility in possebilities:
+        tagId = possebility.replace("#", "").replace("tag:", "")
         try:
             texture = getItemTexture(tagId)
         except KeyError:
@@ -402,7 +416,7 @@ def tagDialog(tag, possebilities):
                 texture = getItemTexture(tagId[0:-1])
             except KeyError:
                 texture = None
-        layout.append([sg.Image(data = texture), sg.Radio(tagToName(i), "tag", first, key = str(count))])
+        layout.append([sg.Image(data = texture), sg.Radio(tagToName(possebility), "tag", first, key = str(count))])
         first = False
         count += 1
     layout.append([sg.Button("Ok", bind_return_key = True), sg.Button("Cancel")])
@@ -495,9 +509,9 @@ def convertToRaw(item, multiplier = 1):
     lastMultiplier = multiplier
     recipeDone.append(item)
     possebilities = []
-    for i in os.listdir("recipes"):
-        if i.split("_from_")[0] == item.replace("minecraft:", "") or i.replace(".json", "") == item.replace("minecraft:", ""):
-            possebilities.append(i.replace(".json", ""))
+    for recipe in os.listdir("recipes"):
+        if recipe.split("_from_")[0] == item.replace("minecraft:", "") or recipe.replace(".json", "") == item.replace("minecraft:", ""):
+            possebilities.append(recipe.replace(".json", ""))
     if len(possebilities) == 0:
         return {item: multiplier}
     elif len(possebilities) > 1:
@@ -577,8 +591,8 @@ def getRecipeLayout(recipe):
         return "Cancel"
     recipeLayout = []
     if recipe["type"] == "minecraft:crafting_shaped":
-        for i in recipe["shape"]:
-            recipeLayout.append(list(i))
+        for row in recipe["shape"]:
+            recipeLayout.append(list(row))
         for row in range(len(recipeLayout)):
             for i in range(len(recipeLayout[row])):
                 if recipeLayout[row][i] == " ":
@@ -621,8 +635,8 @@ def getRecipeLayout(recipe):
 def cmdDialog(possebilities, text):
     print(text)
     count = 0
-    for i in possebilities:
-        print(count, i)
+    for possebility in possebilities:
+        print(count, possebility)
         count += 1
     while True:
         try:
@@ -836,22 +850,22 @@ if nameMain:
                    "-g --gui": "use the gui to display dialogs"}
         filetypes = ["litematica material lists (txt format)", "litematica material lists (csv format)"]
         path = ""
-        for i in sys.argv[2:]:
-            if "-" == i[0]:
+        for arg in sys.argv[2:]:
+            if "-" == arg[0]:
                 isOption = False
                 for option in options:
-                    if i in option.split(" "):
+                    if arg in option.split(" "):
                         isOption = True
                         if option.split(" ")[0] == "-g":
                             cmd = False
                 if not isOption:
                     print("Unrecognized option:", i)
                     exit(1)
-            if os.path.exists(i):
+            if os.path.exists(arg):
                 if path != "":
                     print("This program can only process one file at a time.")
                     exit(1)
-                path = i
+                path = arg
         if "help" in sys.argv or "-h" in sys.argv or "--help" in sys.argv:
             print("Usage:")
             print("main.py <command> <file> <options>")

@@ -14,7 +14,5 @@ class LangDict(dict):
 
 def getLang(filename):
     langJson = json.load(open(filename))
-    langJsonInverted = LangDict()
-    for x, y in langJson.items():
-        langJsonInverted[y] = x
+    langJsonInverted = LangDict({y: x for x, y in langJson.items()})
     return langJson, langJsonInverted

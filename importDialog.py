@@ -35,7 +35,8 @@ def main(gui, minecraftFolder):
             window = sg.Window("What version do you use?", layout)
             event, values = window.read()
             if event == "Cancel" or event == sg.WIN_CLOSED:
-                exit()
+                window.close()
+                return 1
             if event == "Ok":
                 for number in values:
                     if values[number]:
@@ -44,8 +45,8 @@ def main(gui, minecraftFolder):
         else:
             print("What version do you use?")
             count = 0
-            for i in versions:
-                print(count, i.replace(".json", ""))
+            for version in versions:
+                print(count, version.replace(".json", ""))
                 count += 1
             while True:
                 try:
@@ -146,13 +147,13 @@ def main(gui, minecraftFolder):
     del rawLua[-3:]
     itemTextures = {}
     count = 0
-    for i in rawLua:
+    for line in rawLua:
         count += 1
         progress(window, layout, 320 + int(count / len(rawLua) * 70))
-        if "['" in i:
-            name = i.split("['")[1].split("']")[0]
+        if "['" in line:
+            name = line.split("['")[1].split("']")[0]
         else:
-            name = i.split("=")[0].replace("\t", "").replace(" ", "")
+            name = line.split("=")[0].replace("\t", "").replace(" ", "")
         try:
             itemId = langJsonInverted[name].replace("block.", "").replace("shield.", "").replace("item.", "").replace("entity.", "").replace(".", ":")
             if "container." in itemId:
@@ -161,7 +162,7 @@ def main(gui, minecraftFolder):
                         if "block.minecraft." in test:
                             itemId = test.replace("block.minecraft.", "minecraft:")
                 itemId = itemId.replace("container.", "")
-            itemTextures[itemId] = int(i.split("pos = ")[1].split(",")[0])
+            itemTextures[itemId] = int(line.split("pos = ")[1].split(",")[0])
         except KeyError:
             pass
     itemTextures["empty"] = 3643
@@ -170,13 +171,13 @@ def main(gui, minecraftFolder):
     os.makedirs("tags", exist_ok = True)
     progress(window, layout, 400)
     count = 0
-    for i in langJson:
+    for item in langJson:
         count += 1
         progress(window, layout, 400 + int(count / len(langJson) * 100))
-        if "block." == i[0:6]:
-            if not i.replace("block.minecraft.", "minecraft:") in itemTextures:
+        if "block." == item[0:6]:
+            if not item.replace("block.minecraft.", "minecraft:") in itemTextures:
                 url = site.split(">" + langJson[i] + "<")[0].split("1.5x, ")[-1].split(" 2x")[0]
-                path = "textures/" + i.replace("block.minecraft.", "") + ".png"
+                path = "textures/" + item.replace("block.minecraft.", "") + ".png"
                 if not os.path.exists(path) and url[0:4] == "http":
                     open(path, "wb").write(urlopen(url).read())
     json.dump(itemTextures, open("itemTextures.json", "w"), indent = 4)
@@ -184,11 +185,11 @@ def main(gui, minecraftFolder):
     os.makedirs("tagExtract", exist_ok = True)
     jarFile = zipfile.ZipFile(open(os.path.join(minecraftFolder, "versions", version, version + ".jar"), "rb"))
     count = 0
-    for i in jarFileNamelist:
+    for path in jarFileNamelist:
         count += 1
         progress(window, layout, 500 + int(count / len(jarFileNamelist) * 100))
-        if "assets/minecraft/textures/item" in i:
-            name = i.replace("assets/minecraft/textures/item/", "").split("_")
+        if "assets/minecraft/textures/item" in path:
+            name = path.replace("assets/minecraft/textures/item/", "").split("_")
             for index in range(len(name)):
                 try:
                     int(name[index].replace(".png", ""))
@@ -202,19 +203,19 @@ def main(gui, minecraftFolder):
             realName = realName[0:-1].replace(".png", "")
             if not realName in ids:
                 ids.append(realName)
-            jarFile.extract(i, "itemExtract")
-        if "data/minecraft/tags/" in i:
-            jarFile.extract(i, "tagExtract")
-        if "data/minecraft/loot_tables/blocks/" in i:
-            name = i.replace("data/minecraft/loot_tables/blocks/", "").replace(".json", "")
+            jarFile.extract(path, "itemExtract")
+        if "data/minecraft/tags/" in path:
+            jarFile.extract(path, "tagExtract")
+        if "data/minecraft/loot_tables/blocks/" in path:
+            name = path.replace("data/minecraft/loot_tables/blocks/", "").replace(".json", "")
             if not name in ids:
                 ids.append(name)
-        if "assets/minecraft/blockstates/" in i:
-            name = i.replace("assets/minecraft/blockstates/", "").replace(".json", "")
+        if "assets/minecraft/blockstates/" in path:
+            name = path.replace("assets/minecraft/blockstates/", "").replace(".json", "")
             if not name in ids:
                 ids.append(name)
-        if "assets/minecraft/models/item" in i:
-            name = i.replace("assets/minecraft/models/item/", "").split("_")
+        if "assets/minecraft/models/item" in path:
+            name = path.replace("assets/minecraft/models/item/", "").split("_")
             for index in range(len(name)):
                 try:
                     int(name[index].replace(".json", ""))
@@ -258,3 +259,4 @@ def main(gui, minecraftFolder):
     json.dump(config, open("config.json", "w"), indent = 4)
     if gui:
         window.close()
+    return 0
