@@ -344,7 +344,7 @@ def recipeToDict(blockId):
                         materials["tag:" + ingredient["tag"]] += itemCount / count
                 except KeyError:
                     try:
-                        materials[i["item"]] = itemCount / count
+                        materials[ingredient["item"]] = itemCount / count
                     except KeyError:
                         materials["tag:" + ingredient["tag"]] = itemCount / count
     if recipeJson["type"] == "minecraft:smelting":
