@@ -739,7 +739,7 @@ def showList(dictList):
         height = len(layout) * 40
         if height > 640:
             height = 640
-        window = sg.Window("Material List", [[sg.Text("Material List:", size = (14, 3))], [sg.Column(layout, scrollable = True, size = (None, height))], [sg.FileSaveAs(enable_events = True, key = "SaveAs", file_types = [("TXT Files", "*.txt")])]])
+        window = sg.Window("Material List", [[sg.Text("Material List:", size = (14, 3))], [sg.Column(layout, scrollable = True, size = (None, height))], [sg.FileSaveAs(enable_events = True, key = "SaveAs", file_types = [("TXT Files", "*.txt")]), sg.Button("Close")]])
         while True:
             event, values = window.read()
             if event == "SaveAs":
@@ -747,7 +747,7 @@ def showList(dictList):
                     listFile = open(values["SaveAs"], "w")
                     listFile.write(convertDictToList(dictList))
                     listFile.close()
-            if event == sg.WIN_CLOSED:
+            if event == sg.WIN_CLOSED or event == "Close":
                 window.close()
                 return
 
