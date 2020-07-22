@@ -85,6 +85,7 @@ def main(gui, minecraftFolder):
         layout = [[sg.Text("Importing assets...")],
                   [sg.ProgressBar(800, size = (50, 10))]]
         window = sg.Window("Progress", layout)
+        window.DisableClose = True
         window.read(0)
     else:
         layout = None
