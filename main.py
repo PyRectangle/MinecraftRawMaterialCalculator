@@ -163,7 +163,7 @@ def convertListToDict(text):
         material = line.split(":")
         if len(material) != 2:
             continue
-        materialName = langJsonInverted[material[0]].replace("block.", "").replace("item.", "").replace("container.", "").replace("minecraft.", "")
+        materialName = langJsonInverted[material[0]].replace("block.", "").replace("item.", "").replace("container.", "").replace("minecraft.", "").replace("entity.", "")
         if not materialName in config["Ignore"]:
             materialDict[materialName] = int(material[1])
     return materialDict
