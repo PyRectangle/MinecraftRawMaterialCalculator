@@ -176,7 +176,7 @@ def main(gui, minecraftFolder):
         progress(window, layout, 400 + int(count / len(langJson) * 100))
         if "block." == item[0:6]:
             if not item.replace("block.minecraft.", "minecraft:") in itemTextures:
-                url = site.split(">" + langJson[i] + "<")[0].split("1.5x, ")[-1].split(" 2x")[0]
+                url = site.split(">" + langJson[item] + "<")[0].split("1.5x, ")[-1].split(" 2x")[0]
                 path = "textures/" + item.replace("block.minecraft.", "") + ".png"
                 if not os.path.exists(path) and url[0:4] == "http":
                     open(path, "wb").write(urlopen(url).read())
