@@ -177,6 +177,7 @@ def convertDictToList(dictList, multiplier = 1):
             count = int(count + 1)
         else:
             count = int(count)
+        count *= multiplier
         try:
             wayCount = ways[material][1]
             if wayCount > int(wayCount):
@@ -716,8 +717,6 @@ def showList(dictList, multiplier = 1):
         return
     if cmd:
         print("\nMaterials:")
-        for key in dictList:
-            dictList[key] *= multiplier
         print(convertDictToList(dictList, multiplier))
     else:
         layout = []
@@ -744,19 +743,19 @@ def showList(dictList, multiplier = 1):
         if height > 640:
             height = 640
         multiplier = 1
+        lastPath = ""
         window = sg.Window("Material List", [
             [sg.Text("Material List:", size = (14, 3))],
             [sg.Column(layout, scrollable = True, size = (None, height))],
             [sg.Text("Multiplier:"), sg.Spin(list(range(1, 100)), 1, enable_events = True, key = "spin")],
-            [sg.FileSaveAs(enable_events = True, key = "SaveAs", file_types = [("TXT Files", "*.txt")]), sg.Button("Close")]])
+            [sg.FileSaveAs(enable_events = True, key = "SaveAs", file_types = [("TXT Files", "*.txt")], target = "SaveAs"), sg.Button("Close")]])
         while True:
-            event, values = window.read()
+            event, values = window.read(100)
             lastMultiplier = multiplier
-            if event == "spin":
-                try:
-                    multiplier = int(values["spin"])
-                except ValueError:
-                    pass
+            try:
+                multiplier = int(values["spin"])
+            except ValueError:
+                pass
             if multiplier != lastMultiplier:
                 for line in layout:
                     for elem in line:
@@ -767,7 +766,7 @@ def showList(dictList, multiplier = 1):
             if event == "SaveAs":
                 if values["SaveAs"] != "":
                     listFile = open(values["SaveAs"], "w")
-                    listFile.write(convertDictToList(dictList))
+                    listFile.write(convertDictToList(dictList, multiplier))
                     listFile.close()
             if event == sg.WIN_CLOSED or event == "Close":
                 window.close()
