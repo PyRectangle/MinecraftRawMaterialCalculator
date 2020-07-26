@@ -1,6 +1,7 @@
 import sys
 import os
 import time
+from importDialog import main as importDialog
 nameMain = __name__ == "__main__"
 if nameMain:
     try:
@@ -11,7 +12,6 @@ if nameMain:
 if os.path.exists(os.path.expanduser("~/.local/share/mrmc")):
     os.chdir(os.path.expanduser("~/.local/share/mrmc"))
 needGui = len(sys.argv) == 1 or "-g" in sys.argv or "--gui" in sys.argv
-from importDialog import main as importDialog
 if needGui:
     import PySimpleGUI as sg
     if sys.platform == "win32":
@@ -733,15 +733,33 @@ def showList(dictList):
             except KeyError:
                 way = ""
             if way == "":
-                layout.append([sg.Image(data = getItemTexture(material)), sg.Text(str(count) + "x " + blockIdToName(material))])
+                layout.append([sg.Image(data = getItemTexture(material)), sg.Text(str(count) + "x " + blockIdToName(material), (None, 1), True)])
             else:
-                layout.append([sg.Image(data = getItemTexture(material)), sg.Text(str(count) + "x " + blockIdToName(material)), sg.Image(data = getItemTexture(ways[material][0])), sg.Text(way)])
+                layout.append([sg.Image(data = getItemTexture(material)), sg.Text(str(count) + "x " + blockIdToName(material), (None, 1), True), sg.Image(data = getItemTexture(ways[material][0])), sg.Text(way, (None, 1), True)])
         height = len(layout) * 40
         if height > 640:
             height = 640
-        window = sg.Window("Material List", [[sg.Text("Material List:", size = (14, 3))], [sg.Column(layout, scrollable = True, size = (None, height))], [sg.FileSaveAs(enable_events = True, key = "SaveAs", file_types = [("TXT Files", "*.txt")]), sg.Button("Close")]])
+        multiplier = 1
+        window = sg.Window("Material List", [
+            [sg.Text("Material List:", size = (14, 3))],
+            [sg.Column(layout, scrollable = True, size = (None, height))],
+            [sg.Text("Multiplier:"), sg.Spin(list(range(1, 100)), 1, enable_events = True, key = "spin")],
+            [sg.FileSaveAs(enable_events = True, key = "SaveAs", file_types = [("TXT Files", "*.txt")]), sg.Button("Close")]])
         while True:
             event, values = window.read()
+            lastMultiplier = multiplier
+            if event == "spin":
+                try:
+                    multiplier = int(values["spin"])
+                except ValueError:
+                    pass
+            if multiplier != lastMultiplier:
+                for line in layout:
+                    for elem in line:
+                        if type(elem) == sg.Text:
+                            text = elem.get().split("x")
+                            newText = str(int(int(text[0]) / lastMultiplier * multiplier)) + "x" + text[1]
+                            elem.update(newText)
             if event == "SaveAs":
                 if values["SaveAs"] != "":
                     listFile = open(values["SaveAs"], "w")
