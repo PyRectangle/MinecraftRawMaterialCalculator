@@ -169,7 +169,7 @@ def convertListToDict(text):
     return materialDict
 
 
-def convertDictToList(dictList):
+def convertDictToList(dictList, multiplier = 1):
     text = ""
     for material, count in dictList.items():
         if count > int(count):
@@ -182,6 +182,7 @@ def convertDictToList(dictList):
                 wayCount = int(wayCount + 1)
             else:
                 wayCount = int(wayCount)
+            wayCount *= multiplier
             way = " / " + blockIdToName(ways[material][0]) + ": " + str(wayCount)
         except KeyError:
             way = ""
@@ -705,7 +706,7 @@ def recipeChooseDialog(recipes, text):
     return recipe
 
 
-def showList(dictList):
+def showList(dictList, multiplier = 1):
     if dictList == "Cancel":
         if cmd:
             print("Operation aborted by user.")
@@ -714,7 +715,9 @@ def showList(dictList):
         return
     if cmd:
         print("\nMaterials:")
-        print(convertDictToList(dictList))
+        for key in dictList:
+            dictList[key] *= multiplier
+        print(convertDictToList(dictList, multiplier))
     else:
         layout = []
         for material in dictList:
@@ -861,29 +864,49 @@ if nameMain:
     else:
         cmd = True
         commands = {"help": ["show this help"],
-                    "calc": ["calculate the raw materials needed", lambda path: showList(convertListToRaw(convertPathToDict(path)))],
-                    "show": ["show the specified material list", lambda path: showList(convertPathToDict(path))],
+                    "calc": ["calculate the raw materials needed", lambda path, multiplier: showList(convertListToRaw(convertPathToDict(path)), multiplier)],
+                    "show": ["show the specified material list", lambda path, multiplier: showList(convertPathToDict(path), multiplier)],
                     "import": ["import new assets", lambda: importDialog(False, minecraftGetter())]}
-        options = {"-h --help": "show this help",
-                   "-g --gui": "use the gui to display dialogs"}
+        options = {"-h --help": ["show this help", []],
+                   "-g --gui": ["use the gui to display dialogs", []],
+                   "-m --multiplier": ["multiply the material counts with this multiplier", [int]]}
         filetypes = ["litematica material lists (txt format)", "litematica material lists (csv format)"]
+        parameters = {}
         path = ""
+        count = 0
         for arg in sys.argv[2:]:
             if "-" == arg[0]:
                 isOption = False
                 for option in options:
                     if arg in option.split(" "):
                         isOption = True
+                        if len(options[option][1]) > 0:
+                            argCount = 0
+                            for argType in options[option][1]:
+                                argCount += 1
+                                try:
+                                    parameter = argType(sys.argv[2:][count + argCount])
+                                    parameters[option] = parameter
+                                except ValueError:
+                                    if argType == int:
+                                        argType = "full number"
+                                    print(option.split(" ")[1], "option needs a", argType)
+                                    exit(1)
                         if option.split(" ")[0] == "-g":
                             cmd = False
                 if not isOption:
-                    print("Unrecognized option:", i)
+                    print("Unrecognized option:", arg)
                     exit(1)
             if os.path.exists(arg):
                 if path != "":
                     print("This program can only process one file at a time.")
                     exit(1)
                 path = arg
+            count += 1
+        try:
+            multiplier = parameters["-m --multiplier"]
+        except KeyError:
+            multiplier = 1
         if "help" in sys.argv or "-h" in sys.argv or "--help" in sys.argv:
             print("Usage:")
             print("main.py <command> <file> <options>")
@@ -902,7 +925,7 @@ if nameMain:
                     longest = len(option)
             for option in options:
                 length = longest - len(option)
-                print("   ", option, " " * length, options[option])
+                print("   ", option, " " * length, options[option][0])
             print("Supported filetypes:")
             for filetype in filetypes:
                 print("   ", filetype)
@@ -913,7 +936,7 @@ if nameMain:
             if sys.argv[1] == "import":
                 commands[sys.argv[1]][1]()
             else:
-                commands[sys.argv[1]][1](path)
+                commands[sys.argv[1]][1](path, multiplier)
         else:
             print("Unrecognized command:", sys.argv[1])
             exit(1)
