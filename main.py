@@ -4,8 +4,9 @@ import time
 from importDialog import main as importDialog
 nameMain = __name__ == "__main__"
 if nameMain:
+    filePath = os.path.dirname(os.path.realpath(__file__))
     try:
-        os.chdir(os.path.dirname(__file__))
+        os.chdir(filePath)
     except FileNotFoundError:
         pass
     sys.path.append(".")
@@ -896,11 +897,13 @@ if nameMain:
                 if not isOption:
                     print("Unrecognized option:", arg)
                     exit(1)
-            if os.path.exists(arg):
-                if path != "":
-                    print("This program can only process one file at a time.")
-                    exit(1)
-                path = arg
+            for testPath in arg, os.path.join(filePath, arg):
+                if os.path.exists(testPath):
+                    if path != "":
+                        print("This program can only process one file at a time.")
+                        exit(1)
+                    path = testPath
+                    break
             count += 1
         try:
             multiplier = parameters["-m --multiplier"]
