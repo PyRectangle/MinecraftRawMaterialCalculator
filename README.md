@@ -25,10 +25,12 @@ Commands:
     show    show the specified material list
     import  import new assets
 Options:
-    -h --help  show this help
-    -g --gui   use the gui to display dialogs
+    -h --help                  show this help
+    -g --gui                   use the gui to display dialogs
+    -m --multiplier  <number>  multiply the material counts with this multiplier
 Supported filetypes:
     litematica material lists (txt format)
+    litematica material lists (csv format)
 ```
 ### Config
 The main config file is always called `config.json` and consists of the following variables:  
