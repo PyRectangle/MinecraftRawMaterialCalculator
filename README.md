@@ -56,32 +56,41 @@ So for example a material list generated using litematica usually looks like thi
 ```
 You can use this tool on it:
 ```
-$ python main.py calc materiallist.txt
+$ python main.py calc /path/to/my/material/list.txt
 How do you make Redstone Dust?
-0 Blast Furnace: Redstone Ore: 1 
-1 Crafting Table: Block of Redstone: 1 
-2 Furnace: Redstone Ore: 1 
-The Number:1
+0 Blast Furnace: 1x Redstone Ore = 1x Redstone Dust
+1 Crafting Table: 1x Block of Redstone = 9x Redstone Dust
+2 Furnace: 1x Redstone Ore = 1x Redstone Dust
+The number:1
 What planks do you use?
-0 Birch Planks
-1 Acacia Planks
-2 Jungle Planks
-3 Oak Planks
-4 Spruce Planks
+0 Oak Planks
+1 Spruce Planks
+2 Birch Planks
+3 Jungle Planks
+4 Acacia Planks
 5 Dark Oak Planks
-The Number:0
+6 Crimson Planks
+7 Warped Planks
+The number:0
+What Oak Log do you use?
+0 Oak Log
+1 Oak Wood
+2 Stripped Oak Log
+3 Stripped Oak Wood
+The number:0
 How do you make Iron Ingot?
-0 Crafting Table: Block of Iron: 1 
-1 Blast Furnace: Iron Ore: 1 
-2 Furnace: Iron Ore: 1 
-3 Crafting Table: Iron Nugget: 9 
-The Number:0
+0 Crafting Table: 1x Block of Iron = 9x Iron Ingot
+1 Blast Furnace: 1x Iron Ore = 1x Iron Ingot
+2 Furnace: 1x Iron Ore = 1x Iron Ingot
+3 Crafting Table: 9x Iron Nugget = 1x Iron Ingot
+The number:0
 
-Material list:
+Materials:
 Redstone Dust: 15 / Block of Redstone: 2
 Cobblestone: 60
-Birch Log: 12
+Oak Log: 12
 Iron Ingot: 15 / Block of Iron: 2
+
 ```
 As you can see it asks a few questions because most things in the game can be crafted, smelted, ... in different ways.
 Also it rounds up to full blocks as you can see with the iron and redstone.
