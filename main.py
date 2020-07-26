@@ -871,6 +871,7 @@ if nameMain:
                    "-g --gui": ["use the gui to display dialogs", []],
                    "-m --multiplier": ["multiply the material counts with this multiplier", [int]]}
         filetypes = ["litematica material lists (txt format)", "litematica material lists (csv format)"]
+        optionTypes = {int: "number"}
         parameters = {}
         path = ""
         count = 0
@@ -888,9 +889,7 @@ if nameMain:
                                     parameter = argType(sys.argv[2:][count + argCount])
                                     parameters[option] = parameter
                                 except ValueError:
-                                    if argType == int:
-                                        argType = "full number"
-                                    print(option.split(" ")[1], "option needs a", argType)
+                                    print(option.split(" ")[1], "option needs a", optionTypes[argType])   
                                     exit(1)
                         if option.split(" ")[0] == "-g":
                             cmd = False
@@ -919,13 +918,25 @@ if nameMain:
                 length = longest - len(command)
                 print("   ", command, " " * length, commands[command][0])
             print("Options:")
-            lognest = 0
+            longest = 0
+            longestParameter = 0
             for option in options:
+                length = 0
+                for parameter in options[option][1]:
+                    length += len(optionTypes[parameter]) + 3
+                if length > longestParameter:
+                    longestParameter = length
                 if len(option) > longest:
                     longest = len(option)
+            longestParameter -= 1
             for option in options:
                 length = longest - len(option)
-                print("   ", option, " " * length, options[option][0])
+                parameters = ""
+                for parameter in options[option][1]:
+                    parameters += "<" + optionTypes[parameter] + "> "
+                parameters = parameters[0:-1]
+                lengthParameter = longestParameter - len(parameters)
+                print("   ", option, " " * length, parameters, " " * lengthParameter, options[option][0])
             print("Supported filetypes:")
             for filetype in filetypes:
                 print("   ", filetype)
