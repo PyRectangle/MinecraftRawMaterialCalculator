@@ -718,7 +718,7 @@ def showList(dictList, multiplier = 1):
     if cmd:
         print("\nMaterials:")
         print(convertDictToList(dictList, multiplier))
-    else: 
+    else:
         layout = []
         for material in dictList:
             count = dictList[material]
