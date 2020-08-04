@@ -191,8 +191,8 @@ def save(values):
     config["theme"] = values[0]
     config["config"] = values[1]
     config["minecraft"] = values[2]
-    realConfig["Ignore"] = window.element_list()[configIndexes["Ignore"]].GetListValues()
-    realConfig["StopAt"] = window.element_list()[configIndexes["StopAt"]].GetListValues()
+    realConfig["Ignore"] = window["Ignore"].GetListValues()
+    realConfig["StopAt"] = window["StopAt"].GetListValues()
     realConfig["lang"] = values[3]
     return config, realConfig
 
@@ -227,21 +227,21 @@ def start():
             name = "Ignore"
             if event == "Remove ":
                 name = "StopAt"
-            listValues = window.element_list()[configIndexes[name]].GetListValues()
+            listValues = window[name].GetListValues()
             for i in values[name]:
                 listValues.remove(i)
-            window.element_list()[configIndexes[name]].Update(listValues)
+            window[name].Update(listValues)
         if event == "Add" or event == "Add ":
             name = "Ignore"
             if event == "Add ":
                 name = "StopAt"
-            listValues = window.element_list()[configIndexes[name]].GetListValues()
+            listValues = window[name].GetListValues()
             window.hide()
             block = selectBlock()
             if block != None:
                 listValues.append(block)
             window.un_hide()
-            window.element_list()[configIndexes[name]].Update(listValues)
+            window[name].Update(listValues)
         if event == "Save":
             save(values)
             saveToFile()

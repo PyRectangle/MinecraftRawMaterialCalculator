@@ -718,7 +718,7 @@ def showList(dictList, multiplier = 1):
     if cmd:
         print("\nMaterials:")
         print(convertDictToList(dictList, multiplier))
-    else:
+    else: 
         layout = []
         for material in dictList:
             count = dictList[material]
@@ -736,9 +736,9 @@ def showList(dictList, multiplier = 1):
             except KeyError:
                 way = ""
             if way == "":
-                layout.append([sg.Image(data = getItemTexture(material)), sg.Text(str(count) + "x " + blockIdToName(material), (None, 1), True)])
+                layout.append([sg.Image(data = getItemTexture(material)), sg.Text(str(count) + "x " + blockIdToName(material), (0, 1), True)])
             else:
-                layout.append([sg.Image(data = getItemTexture(material)), sg.Text(str(count) + "x " + blockIdToName(material), (None, 1), True), sg.Image(data = getItemTexture(ways[material][0])), sg.Text(way, (None, 1), True)])
+                layout.append([sg.Image(data = getItemTexture(material)), sg.Text(str(count) + "x " + blockIdToName(material), (0, 1), True), sg.Image(data = getItemTexture(ways[material][0])), sg.Text(way, (None, 1), True)])
         height = len(layout) * 40
         if height > 640:
             height = 640
@@ -746,7 +746,7 @@ def showList(dictList, multiplier = 1):
         lastPath = ""
         window = sg.Window("Material List", [
             [sg.Text("Material List:", size = (14, 3))],
-            [sg.Column(layout, scrollable = True, size = (None, height))],
+            [sg.Column(layout, scrollable = True, size = (None, height), key = "column")],
             [sg.Text("Multiplier:"), sg.Spin(list(range(1, 100)), 1, enable_events = True, key = "spin")],
             [sg.FileSaveAs(enable_events = True, key = "SaveAs", file_types = [("TXT Files", "*.txt")], target = "SaveAs"), sg.Button("Close")]])
         while True:
@@ -754,17 +754,22 @@ def showList(dictList, multiplier = 1):
             lastMultiplier = multiplier
             try:
                 multiplier = int(values["spin"])
-            except ValueError:
+            except (ValueError, TypeError):
                 pass
             if multiplier != lastMultiplier:
                 for line in layout:
                     for elem in line:
                         if type(elem) == sg.Text:
-                            text = elem.get().split("x")
+                            text = elem.get().split("x") # tk
+                            # text = elem.DisplayText.split("x") # qt
                             newText = str(int(int(text[0]) / lastMultiplier * multiplier)) + "x" + text[1]
                             elem.update(newText)
+                try:
+                    window["column"].contents_changed()
+                except AttributeError:
+                    window["column"].Widget.canvas.config(scrollregion=window['column'].Widget.canvas.bbox('all'))
             if event == "SaveAs":
-                if values["SaveAs"] != "":
+                if values["SaveAs"] != "" and values["SaveAs"] != None:
                     listFile = open(values["SaveAs"], "w")
                     listFile.write(convertDictToList(dictList, multiplier))
                     listFile.close()
