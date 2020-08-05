@@ -718,7 +718,7 @@ def showList(dictList, multiplier = 1):
     if cmd:
         print("\nMaterials:")
         print(convertDictToList(dictList, multiplier))
-    else: 
+    else:
         layout = []
         for material in dictList:
             count = dictList[material]
@@ -748,7 +748,7 @@ def showList(dictList, multiplier = 1):
         window = sg.Window("Material List", [
             [sg.Text("Material List:", size = (14, 3))],
             [sg.Column(layout, scrollable = True, size = (None, height), key = "column")],
-            [sg.Text("Multiplier:"), sg.Spin(list(range(1, 100)), 1, enable_events = True, key = "spin")],
+            [sg.Text("Multiplier:"), sg.Spin([1, 2], 1, enable_events = True, key = "spin")],
             [sg.FileSaveAs(enable_events = True, key = "SaveAs", file_types = [("TXT Files", "*.txt")], target = "SaveAs"), sg.Button("Close")]
         ])
         while True:
@@ -759,6 +759,11 @@ def showList(dictList, multiplier = 1):
             except (ValueError, TypeError):
                 pass
             if multiplier != lastMultiplier:
+                if multiplier <= 1:
+                    spinValues = [1, 2]
+                else:
+                    spinValues = [multiplier - 1, multiplier, multiplier + 1]
+                window["spin"].update(multiplier, spinValues)
                 for line in layout:
                     for elem in line:
                         if type(elem) == sg.Text:
