@@ -858,6 +858,7 @@ def showMainWindow():
             window.hide()
             selectedList = convertPathToDict(values[0])
             if selectedList != None:
+                ways = {}
                 showList(selectedList)
             window.un_hide()
         if event == "Config":
