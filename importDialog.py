@@ -140,7 +140,7 @@ def main(gui, minecraftFolder):
     ids = []
     langJson, langJsonInverted = lang.getLang("lang/en_us.json")
     spritesheet = open("spritesheet.png", "wb")
-    spritesheet.write(urlopen("https://minecraft.gamepedia.com" + urlopen("https://minecraft.gamepedia.com/Template:InvSprite").read().decode().split("background-image:url(")[1].split(")")[0]).read())
+    spritesheet.write(urlopen(urlopen("https://minecraft.gamepedia.com/Template:InvSprite").read().decode().split("background-image:url(")[1].split(")")[0]).read())
     spritesheet.close()
     progress(window, layout, 310)
     rawLua = urlopen("https://minecraft.gamepedia.com/Module:InvSprite").read().decode().replace("&quot;", "'").split("ids = {\n")[1].split("</pre>")[0].split("\n")
